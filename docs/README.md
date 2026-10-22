@@ -32,7 +32,8 @@ Como tudo se conecta hoje: VPC, subnets, gateways e o que ainda falta. Atualizad
 | 20 | [20-dynamic-blocks.md](20-dynamic-blocks.md) | Dynamic blocks: regras de SG geradas por lista, padrões no local, revisão das regras |
 | 21 | [21-modules.md](21-modules.md) | Modules: inputs, outputs, escopo isolado, refatorar sem destruir (`moved`) |
 | 22 | [22-modulo-vpc-grupos-de-subnets.md](22-modulo-vpc-grupos-de-subnets.md) | Módulo VPC com grupos de subnets: `map(map(object))`, achatamento com `merge(...)`, outputs agrupados, `moved` por chave |
-| 23 | [23-comandos.md](23-comandos.md) | Cheat sheet de comandos |
+| 23 | [23-modulo-ec2.md](23-modulo-ec2.md) | Módulo EC2: um módulo chamado 2× (bastion/rancher), SG como `object`, `count` no EIP, nomes únicos, migração |
+| 24 | [24-comandos.md](24-comandos.md) | Cheat sheet de comandos |
 | 📘 | [types_expression.md](types_expression.md) | Material de apoio (aula 04.04): tipos de coleção e for expressions, com exercícios |
 | — | [CHANGELOG.md](CHANGELOG.md) | Diário de estudo: o que mudou e quando |
 
@@ -44,13 +45,13 @@ Como tudo se conecta hoje: VPC, subnets, gateways e o que ainda falta. Atualizad
 devops/
 ├── providers.tofu         # bloco terraform (providers aws, http, tls, local + backend S3) + provider AWS
 ├── data.tofu              # data sources: seu IP (http) e AMI Ubuntu (aws_ami)
-├── ec2.tofu               # chave SSH + EC2 bastion + Elastic IP
+├── ec2.tofu               # chama o módulo ec2: module "bastion" e module "rancher"
 ├── local.tofu             # locals: context_name, ngw_regional_mode, internet_cidr_block, my_public_ip, common_tags
 ├── vpc.tofu               # chama o módulo de rede (module "vpc")
 ├── variables.tofu         # região, ambiente, VPC, subnets agrupadas (map(map(object))), NAT, EC2, regras do bastion
-├── security_group.tofu     # SG bastion_sg (regras via dynamic blocks)
-├── outputs.tofu           # repassa outputs do módulo + bastion, SG, EIP, key pair
+├── outputs.tofu           # repassa outputs de module.vpc e module.bastion
 ├── modules/vpc/           # MÓDULO: VPC, 12 subnets em grupos, IGW, NAT regional, route tables
+├── modules/ec2/           # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (count)
 ├── .terraform.lock.hcl    # versões travadas dos providers (vai pro git)
 ├── .terraform/            # providers + config do backend, gerados pelo init (fora do git)
 ├── .env                   # credenciais AWS (fora do git)
@@ -70,11 +71,9 @@ devops/
   - `aws_internet_gateway.algadelivery` (`algadelivery-igw`)
   - `aws_nat_gateway.algadelivery` (**regional**, 💲 pago por hora)
   - `aws_route_table.public` (→ IGW) e `aws_route_table.private` (→ NAT) + 12 associations
-  - `aws_security_group.bastion` (regras via `dynamic`: SSH do seu IP, 80/443 da VPC)
-  - `aws_instance.bastion` (pub-a, Ubuntu 22.04 `t3.micro`) + `aws_eip.bastion` (IP fixo)
-  - `tls_private_key` + `aws_key_pair` + `local_sensitive_file` (chave `./algadelivery-iac.pem`, no `.gitignore` ✅)
+  - **No módulo `ec2`**, chamado 2× (`module.bastion` e `module.rancher`), cada um com: EC2 Ubuntu 22.04 `t3.micro` (pub-a), Elastic IP, SG próprio (`bastion-sg` / `rancher-sg`, regras via `dynamic`), key pair e `.pem` próprios (`algadelivery-bastion.pem` / `algadelivery-rancher.pem`, no `.gitignore` ✅)
 - **Outputs (raiz):** os de rede repassados de `module.vpc` (`vpc_id`, `subnet_public_ids`, `igw_id`, `ngw_id`, route tables…) + `security_group_bastion_id`, `bastion_id`, `bastion_arn`, `bastion_public_ip`, `keypair_arn`
-- **No código:** 35 recursos. 🔴 Adicione os 23 blocos `moved` por chave antes do apply ([doc 22](22-modulo-vpc-grupos-de-subnets.md#migração-do-state-moved-por-chave)). ⚠️ O NAT Gateway cobra por hora; veja as pendências em [ARQUITETURA.md](ARQUITETURA.md#pendências).
+- **No código:** 41 recursos. 🔴 Adicione os `moved` da VPC (doc 22) e do bastion (doc 23) antes do apply. ⚠️ NAT + 2 EC2 + 2 Elastic IPs cobram por hora; veja as pendências em [ARQUITETURA.md](ARQUITETURA.md#pendências).
 
 ## Rodando rápido
 

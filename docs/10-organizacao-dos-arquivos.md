@@ -8,12 +8,11 @@ Com a VPC, o projeto deixou de ter um `main.tofu` único. Agora cada assunto fic
 devops/
 ├── providers.tofu    # bloco terraform (versões + backend) e provider "aws"
 ├── data.tofu         # data sources: data.http.my_public_ip, data.aws_ami.ubuntu
-├── ec2.tofu          # chave SSH (tls + key pair + .pem), EC2 bastion e Elastic IP
-├── local.tofu        # locals: context_name, ngw_regional_mode, internet_cidr_block, my_public_ip, common_tags
+├── ec2.tofu          # CHAMA o módulo ec2 duas vezes: module "bastion" e module "rancher"
+├── local.tofu        # locals: context_name, my_public_ip, common_tags, configs de SG (bastion e rancher)
 ├── vpc.tofu          # CHAMA o módulo de rede: module "vpc" { source = "./modules/vpc" }
 ├── variables.tofu    # aws_region, environment, vpc_cidr_block, subnets, NAT, EC2, regras do bastion
-├── security_group.tofu  # SG bastion_sg (regras via dynamic blocks)
-├── outputs.tofu      # repassa outputs do módulo + bastion, SG, EIP, key pair
+├── outputs.tofu      # repassa outputs de module.vpc e module.bastion
 ├── .terraform.lock.hcl
 └── modules/
     └── vpc/          # MÓDULO: VPC, 9 subnets, IGW, NAT, route tables (doc 21)
@@ -21,6 +20,11 @@ devops/
         ├── variables.tofu   # inputs
         ├── outputs.tofu     # outputs
         └── locals.tofu
+    └── ec2/          # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (doc 23)
+        ├── main.tofu
+        ├── security_group.tofu
+        ├── variables.tofu
+        └── outputs.tofu
 ```
 
 | Arquivo | O que vai nele |
@@ -29,8 +33,8 @@ devops/
 | `vpc.tofu` | A **chamada** do módulo de rede, com os inputs (ver [21-modules.md](21-modules.md)) |
 | `modules/vpc/` | O **módulo** com toda a rede. Antes era o `networking.tofu` |
 | `data.tofu` | **Leituras** de coisas que já existem (data sources), ver [18-data-sources-e-functions.md](18-data-sources-e-functions.md) |
-| `ec2.tofu` | Servidores (EC2) e a chave SSH, ver [19-ec2-bastion-e-vm-privada.md](19-ec2-bastion-e-vm-privada.md) |
-| `security_group.tofu` | Firewalls (security groups) dos recursos, ver [17-security-groups.md](17-security-groups.md) |
+| `ec2.tofu` | As **chamadas** do módulo de servidor (bastion, rancher), ver [23-modulo-ec2.md](23-modulo-ec2.md) |
+| `modules/ec2/` | O **módulo** de servidor (antes: `ec2.tofu` + `security_group.tofu` na raiz) |
 | `local.tofu` | Valores calculados (`locals`), ver [06-variaveis.md](06-variaveis.md#locals-valores-derivados) |
 | `variables.tofu` | Entradas (ver [06-variaveis.md](06-variaveis.md)) |
 | `outputs.tofu` | Saídas (ver [07-outputs.md](07-outputs.md)) |

@@ -1,4 +1,4 @@
-# 23. Cheat sheet de comandos
+# 24. Cheat sheet de comandos
 
 > Endereços com `for_each` levam aspas e colchetes: use aspas simples no terminal, ex.: `tofu state show 'aws_subnet.public["public_a"]'`.
 
@@ -108,6 +108,15 @@ tofu state mv 'aws_vpc.algadelivery' 'module.vpc.aws_vpc.main'   # alternativa a
 echo 'keys(var.subnet_pvt_config)' | tofu console               # grupos de subnets privadas
 echo 'type(["texto", 42, true])' | tofu console                 # ver o tipo de um valor
 tofu output -json | python3 -m json.tool                        # outputs agrupados por grupo
+```
+
+## Módulo EC2 (doc 23)
+
+```bash
+tofu state list | grep -E '^module\.(bastion|rancher)'     # recursos de cada servidor
+tofu output bastion_public_ip                               # IP do bastion (Elastic IP)
+ssh -i algadelivery-bastion.pem ubuntu@IP_BASTION           # cada servidor tem seu .pem
+ssh -i algadelivery-rancher.pem ubuntu@IP_RANCHER
 ```
 
 ## Outputs

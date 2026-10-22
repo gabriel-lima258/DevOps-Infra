@@ -1,10 +1,10 @@
-resource "aws_security_group" "bastion" {
-  name        = "bastion_sg"
-  description = "Allow TLS inbound traffic and all outbound traffic"
-  vpc_id      = module.vpc.vpc_id
+resource "aws_security_group" "main" {
+  name        = var.security_group_config.name
+  description = var.security_group_config.description
+  vpc_id      = var.vpc_id
 
   dynamic "ingress" {
-    for_each = local.bastion_ingress_rules
+    for_each = var.security_group_config.ingress_rules
     content {
       description = ingress.value.description
       from_port   = ingress.value.from_port
@@ -15,7 +15,7 @@ resource "aws_security_group" "bastion" {
   }
 
   dynamic "egress" {
-    for_each = local.bastion_egress_rules
+    for_each = var.security_group_config.egress_rules
     content {
       description = egress.value.description
       from_port   = egress.value.from_port
@@ -25,7 +25,7 @@ resource "aws_security_group" "bastion" {
     }
   }
 
-  tags = merge(local.common_tags, {
-    Name = "bastion_sg"
+  tags = merge(var.common_tags, {
+    Name = var.security_group_config.name
   })
 }

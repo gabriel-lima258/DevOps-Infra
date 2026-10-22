@@ -74,7 +74,7 @@ variable "instance_type" {
 
 variable "keypair_name" {
   type    = string
-  default = "algadelivery-iac"
+  default = "algadelivery-bastion"
 }
 
 variable "ami_id" {
@@ -83,26 +83,24 @@ variable "ami_id" {
   default     = "ami-04680790a315cd58d"
 }
 
-variable "bastion_ingress_rules" {
-  description = "Ingress rules for bastion security group"
-  type = list(object({
+variable "bastion_security_group_config" {
+  type = object({
+    name        = string
     description = string
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    cidr_blocks = list(string)
-  }))
-  default = []
-}
-
-variable "bastion_egress_rules" {
-  description = "Egress rules for bastion security group"
-  type = list(object({
-    description = string
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    cidr_blocks = list(string)
-  }))
-  default = []
+    ingress_rules = list(object({
+      description = string
+      from_port   = number
+      to_port     = number
+      protocol    = string
+      cidr_blocks = list(string)
+    }))
+    egress_rules = list(object({
+      description = string
+      from_port   = number
+      to_port     = number
+      protocol    = string
+      cidr_blocks = list(string)
+    }))
+  })
+  default = null
 }

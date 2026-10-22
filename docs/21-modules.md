@@ -292,6 +292,8 @@ O `moved` é preferível: fica no código, passa por revisão e mostra o resulta
 
 ## Reuso: o mesmo módulo, outros lugares
 
+> **Na prática:** o projeto já reusa um módulo. `modules/ec2` é chamado duas vezes (`module.bastion` e `module.rancher`), e cada chamada cria seus próprios recursos. Ver [23-modulo-ec2.md](23-modulo-ec2.md), inclusive o cuidado com **nomes únicos** por chamada.
+
 ```hcl
 # Dois ambientes no mesmo projeto (exemplo)
 module "vpc_homolog" {

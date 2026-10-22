@@ -1,8 +1,8 @@
 # Arquitetura atual
 
-> Diagrama vivo: atualizado a cada mudança no código. **Última atualização: 2026-10-22**, com as subnets em **grupos** (`map(map(object))`) e o novo grupo **database**.
+> Diagrama vivo: atualizado a cada mudança no código. **Última atualização: 2026-10-22**, com o **módulo `ec2`** (servidores `bastion` e `rancher`).
 > State: `s3://algadelivery-tfstate-devops/development/networking/remote.tfstate` · Região: `us-east-1` · Ambiente: `development`
-> **Situação:** o código tem **35 recursos** (29 dentro de `module.vpc` + 6 na raiz). 🔴 O state ainda é o de antes dos módulos: **sem `moved` por chave, o próximo `apply` destrói 27 e cria 32**. Com os 23 `moved` do [doc 22](22-modulo-vpc-grupos-de-subnets.md#migração-do-state-moved-por-chave), o plan testado fica em 8 add / 8 change / 3 destroy (⚠️ inclui a substituição do bastion por AMI nova).
+> **Situação:** o código tem **41 recursos** (29 em `module.vpc` + 6 em `module.bastion` + 6 em `module.rancher`). 🔴 O state ainda é o de antes dos módulos: **sem `moved`, o próximo `apply` destrói 30 e cria 41**. Com os 23 `moved` da VPC ([doc 22](22-modulo-vpc-grupos-de-subnets.md#migração-do-state-moved-por-chave)) + 5 do bastion ([doc 23](23-modulo-ec2.md#migração-do-state)), o plan testado fica em 17 add / 7 change / 5 destroy (o bastion ainda é recriado: AMI, key pair e SG mudaram).
 
 ## Diagrama
 
@@ -17,12 +17,15 @@ flowchart TB
     subgraph mod["module.vpc (modules/vpc)"]
     subgraph vpc["VPC algadelivery-vpc · 172.25.0.0/16"]
         ngw["NAT Gateway REGIONAL<br/>algadelivery-ngw<br/>cobre todas as AZs"]
-        sgB["SG bastion_sg (dynamic blocks)<br/>in: 22 do SEU IP /32 · 80, 443 da VPC<br/>out: tudo (+80)"]
+        sgB["module.bastion · SG bastion-sg<br/>in: 22 do SEU IP /32 · 80, 443 da VPC<br/>out: tudo (+80)"]
+        sgR["module.rancher · SG rancher-sg<br/>mesmas regras do bastion"]
 
         subgraph aza["AZ us-east-1a"]
             pubA["pub-public-a<br/>172.25.1.0/24"]
-            ec2B["EC2 algadelivery-bastion<br/>Ubuntu 22.04 · t3.micro"]
-            eip["Elastic IP<br/>IP público fixo"]
+            ec2B["module.bastion · EC2 bastion<br/>Ubuntu 22.04 · t3.micro<br/>key algadelivery-bastion"]
+            eip["Elastic IP (bastion)"]
+            ec2R["module.rancher · EC2 rancher<br/>Ubuntu 22.04 · t3.micro<br/>key algadelivery-rancher"]
+            eipR["Elastic IP (rancher)"]
             mgmtA["pvt-management-a<br/>172.25.4.0/24"]
             clA["pvt-cluster-a<br/>172.25.7.0/24"]
             dbA["pvt-database-a<br/>172.25.10.0/24"]
@@ -64,6 +67,9 @@ flowchart TB
     ec2B --- pubA
     eip --- ec2B
     sgB -.- ec2B
+    ec2R --- pubA
+    eipR --- ec2R
+    sgR -.- ec2R
 
     classDef pub fill:#dbeafe,stroke:#2563eb,color:#111
     classDef mgmt fill:#fef3c7,stroke:#d97706,color:#111
@@ -80,8 +86,8 @@ flowchart TB
     class dbA,dbB,dbC db
     class igw,ngw gw
     class rtPub,rtPvt,rtNat rt
-    class sgB sg
-    class ec2B,eip ec2
+    class sgB,sgR sg
+    class ec2B,eip,ec2R,eipR ec2
     style mod fill:transparent,stroke:#64748b,stroke-dasharray:6 4
 ```
 
@@ -113,10 +119,10 @@ flowchart TB
 │  │ database-a .10/24│  │ database-b .11/24│   │ database-c .12/24│ → rt-private
 │  └──────────────────┘  └──────────────────┘   └──────────────────┘          │
 │                                                                             │
-│  SG bastion_sg (dynamic): in 22 do SEU IP · 80/443 da VPC · out tudo        │
-│  EC2 algadelivery-bastion (pub-a) + Elastic IP (IP público fixo)            │
-│        você ──SSH──► Elastic IP ──► bastion                                 │
-│  (VM privada e vm_private_sg saíram do código)                              │
+│  module.bastion: EC2 bastion (pub-a) + EIP + SG bastion-sg + key/.pem      │
+│  module.rancher: EC2 rancher (pub-a) + EIP + SG rancher-sg + key/.pem      │
+│  SGs: in 22 do SEU IP · 80/443 da VPC · out tudo                            │
+│        você ──SSH──► Elastic IP ──► bastion / rancher                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -133,15 +139,11 @@ flowchart TB
 | Route table privada | `module.vpc.aws_route_table.private` | `0.0.0.0/0 → NAT` (`nat_gateway_id` ✅) | 1 |
 | Associations públicas | `module.vpc.aws_route_table_association.public[...]` | 3 subnets → rt-public | 3 |
 | Associations privadas | `module.vpc.aws_route_table_association.private[...]` | 9 subnets → rt-private | 9 |
-| Security Group do bastion | `aws_security_group.bastion` | `bastion_sg` · regras via `dynamic` (in 22 do seu IP, 80/443 da VPC; out tudo + 80) | 1 |
-| Chave SSH (gerada) | `tls_private_key.algadelivery` | RSA 4096 (⚠️ fica no state) | 1 |
-| Key pair na AWS | `aws_key_pair.algadelivery` | `algadelivery-iac` (chave pública) | 1 |
-| Arquivo da chave privada | `local_sensitive_file.private_key` | `./algadelivery-iac.pem` (0400) · `*.pem` no `.gitignore` ✅ | 1 |
-| EC2 bastion | `aws_instance.bastion` | Ubuntu 22.04 · `t3.micro` · pub-a · 💲 | 1 |
-| Elastic IP do bastion | `aws_eip.bastion` | IP público fixo · 💲 | 1 |
-| **Total** | | | **35** |
+| **module.bastion** (`modules/ec2`) | `module.bastion.aws_instance.main` · `.aws_eip.main[0]` · `.aws_security_group.main` · `.aws_key_pair.main` · `.tls_private_key.main` · `.local_sensitive_file.private_key` | EC2 `bastion` (pub-a, `t3.micro`) · SG `bastion-sg` · key `algadelivery-bastion` · `./algadelivery-bastion.pem` · 💲 | 6 |
+| **module.rancher** (`modules/ec2`) | os mesmos 6, com prefixo `module.rancher.` | EC2 `rancher` (pub-a, `t3.micro`) · SG `rancher-sg` · key `algadelivery-rancher` · `./algadelivery-rancher.pem` · 💲 | 6 |
+| **Total** | | | **41** |
 
-Saíram do código (o próximo apply destrói): `aws_instance.vm_private` e `aws_security_group.vm_private`.
+Saíram do código (o próximo apply destrói): `aws_instance.vm_private` e `aws_security_group.vm_private`. O bastion antigo (`aws_instance.bastion` etc.) precisa de `moved` para virar `module.bastion.*` (doc 23).
 
 Data sources (leituras, não contam como recursos): `data.http.my_public_ip` e `data.aws_ami.ubuntu`.
 
@@ -168,21 +170,23 @@ Os IDs (`vpc-…`, `igw-…`, `rtb-…`) mudam a cada `destroy`/`apply`; consult
 | Internet → recurso público (ex.: ALB) | Internet → IGW → rt-public → subnet pública | ✅ se o recurso tiver IP público + security group liberando |
 | Internet → subnet privada | não existe, **por design** | 🔒 bloqueado, como deve ser |
 | Entre subnets da VPC | rota `local` automática em todas as tabelas | ✅ (rota) · a porta depende do SG de destino |
-| SSH: você → bastion | Seu IP → IGW → rt-public → Elastic IP → EC2 bastion (`bastion_sg`: 22 só do seu IP `/32`) | ✅ `ssh -i algadelivery-iac.pem ubuntu@ELASTIC_IP` |
+| SSH: você → bastion | Seu IP → IGW → rt-public → Elastic IP → EC2 bastion (`bastion_sg`: 22 só do seu IP `/32`) | ✅ `ssh -i algadelivery-bastion.pem ubuntu@ELASTIC_IP` |
+| SSH: você → rancher | Seu IP → IGW → rt-public → Elastic IP → EC2 rancher (`rancher-sg`: 22 só do seu IP) | ✅ `ssh -i algadelivery-rancher.pem ubuntu@ELASTIC_IP_RANCHER` |
 | SSH: bastion → VM privada | — | ⏸️ a VM privada saiu do código |
 
 ## Pendências
 
 > Data sources (`data.http.my_public_ip`, `data.aws_ami.ubuntu`) não aparecem no diagrama: não são recursos, só leituras.
 
-1. 🔴 **`moved.tofu` com 23 blocos por chave antes do `apply`.** Sem ele: 32 add / 27 destroy. Com ele: 8 add / 8 change / 3 destroy ([doc 22](22-modulo-vpc-grupos-de-subnets.md#migração-do-state-moved-por-chave)). O `moved.tofu` do doc 21 ficou desatualizado (as chaves mudaram).
-2. ⚠️ **O bastion vai ser substituído** porque a AMI mudou (`most_recent = true`): adicione `lifecycle { ignore_changes = [ami] }` antes do apply.
-3. ⚠️ Chaves de subnets precisam ser únicas entre grupos (o `merge` sobrescreve em silêncio): `validation` sugerida no doc 22.
-4. O grupo `database` não aparece nos outputs da raiz. As descriptions de `subnet_pvt_ids/arns` dizem "management". Nomes de outputs inconsistentes; `subnet_pub_ids["public"][0]` depende da ordem; `var.vpc_name` e `var.ami_id` sem uso.
-5. As subnets `database` usam a route table privada (com saída via NAT). Se o banco não deve sair para a internet, ele precisa de uma route table própria.
-6. ⚠️ Regras do bastion: entrada 80/443 da VPC sem uso; saída 80 redundante (doc 20).
-7. A regra SSH do bastion usa o IP de **quem roda o tofu** (doc 18).
-8. 💲 Custos: NAT (~US$ 0,045/h) + `t3.micro` + Elastic IP. `tofu destroy` ao terminar cada sessão.
+1. 🔴 **`moved.tofu` antes do `apply`:** 23 blocos da VPC ([doc 22](22-modulo-vpc-grupos-de-subnets.md#migração-do-state-moved-por-chave)) + 5 do bastion ([doc 23](23-modulo-ec2.md#migração-do-state)). Sem eles: 41 add / 30 destroy. Com eles: 17 add / 7 change / 5 destroy.
+2. ⚠️ **O bastion será recriado** mesmo com `moved`: AMI nova (`most_recent`), key pair renomeado (`algadelivery-iac` → `algadelivery-bastion`) e SG com `name`/`description` novos. Para evitar: `lifecycle { ignore_changes = [ami] }` e manter os nomes antigos.
+3. ✅ ~~Conflitos bastion × rancher (key pair, SG, `.pem` e tag iguais)~~: corrigidos (doc 23).
+4. Módulo `ec2`: `associate_public_ip_address = true` fixo; `key_name` via variável + `depends_on` (prefira referência); inputs sem `description`; outputs da raiz só do bastion; as duas EC2 na mesma subnet `pub_a`.
+5. ⚠️ Chaves de subnets precisam ser únicas entre grupos: `validation` sugerida no doc 22. Grupo `database` fora dos outputs da raiz; `var.vpc_name` e `var.ami_id` sem uso.
+6. As subnets `database` usam a route table privada (com saída via NAT).
+7. ⚠️ Regras dos SGs: entrada 80/443 da VPC sem uso; saída 80 redundante (doc 20).
+8. A regra SSH usa o IP de **quem roda o tofu** (doc 18).
+9. 💲 Custos: NAT (~US$ 0,045/h) + **2×** `t3.micro` + **2×** Elastic IP. `tofu destroy` ao terminar cada sessão.
 
 ## Histórico da arquitetura
 
@@ -196,6 +200,7 @@ Os IDs (`vpc-…`, `igw-…`, `rtb-…`) mudam a cada `destroy`/`apply`; consult
 | 2026-10-20 | Security Groups `bastion_sg` e `vm_private_sg` (SSH) · outputs dos IDs das route tables |
 | 2026-10-20 | Data source `http` (seu IP) → SSH do bastion só do seu IP `/32` · tags via `merge(local.common_tags, …)` · provider `http` |
 | 2026-10-20 | EC2 bastion (pub-a) e VM privada (mgmt-a) · AMI Ubuntu via `data.aws_ami` · chave SSH gerada (`tls` + `aws_key_pair` + `.pem` local) · providers `tls` e `local` |
+| 2026-10-22 | Módulo **`modules/ec2`** (chave, key pair, `.pem`, SG com dynamic, EC2, EIP com `count`) chamado 2×: `bastion` e `rancher` · conflitos de nome corrigidos · `security_group.tofu` da raiz removido |
 | 2026-10-22 | Subnets em grupos (`map(map(object))`, achatadas com `merge([for ...]...)`) · `aws_subnet.private` único · grupo **database** (`172.25.10-12.0/24`) · outputs agrupados · tags `pub-public-*` / `pvt-<grupo>-*` |
 | 2026-10-20 | Rede movida para o **módulo `modules/vpc`** (`vpc.tofu` chama; outputs repassados) · `nat_gateway_id` corrigido · tag da VPC → `algadelivery-vpc` · outputs de bastion/SG/EIP/key pair |
 | 2026-10-20 | Regras do SG do bastion via `dynamic` blocks (listas em variável + padrões no local) · Elastic IP no bastion · VM privada e `vm_private_sg` removidas · `*.pem` no `.gitignore` |

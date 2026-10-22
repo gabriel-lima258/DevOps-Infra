@@ -62,27 +62,27 @@ output "route_table_private_id" {
   value       = module.vpc.route_table_private_id
 }
 
-output "security_group_bastion_id" {
-  description = "The ID of the bastion security group"
-  value       = aws_security_group.bastion.id
-}
-
 output "bastion_id" {
   description = "The ID of the bastion instance"
-  value       = aws_instance.bastion.id
+  value       = module.bastion.id
 }
 
 output "bastion_arn" {
   description = "The ARN of the bastion instance"
-  value       = aws_instance.bastion.arn
+  value       = module.bastion.arn
 }
 
 output "bastion_public_ip" {
   description = "The public IP of the bastion instance"
-  value       = aws_eip.bastion.public_ip
+  value       = module.bastion.public_ip
 }
 
 output "keypair_arn" {
   description = "The ARN of the key pair"
-  value       = aws_key_pair.algadelivery.arn
+  value       = module.bastion.keypair_arn
+}
+
+output "security_group_bastion_id" {
+  description = "The ID of the bastion security group"
+  value       = module.bastion.security_group_id
 }

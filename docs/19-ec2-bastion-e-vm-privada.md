@@ -1,5 +1,7 @@
 # 19. EC2: bastion e VM privada
 
+> **Atualização (módulo EC2):** a instância, o key pair, o `.pem`, o Elastic IP e o Security Group agora moram no módulo `modules/ec2`, chamado duas vezes (`module.bastion` e `module.rancher`). O código abaixo é a versão anterior; os conceitos são os mesmos. Ver [23-modulo-ec2.md](23-modulo-ec2.md).
+
 Visão geral de como tudo se conecta: [ARQUITETURA.md](ARQUITETURA.md).
 
 > **Atualização:** a **VM privada** (`aws_instance.vm_private`) e o SG dela (`vm_private_sg`) **saíram do código**. O próximo `apply` destrói os dois. As seções sobre ela ficam como referência. O bastion ganhou um **Elastic IP** (seção 9), e as regras do SG passaram a usar `dynamic` blocks ([doc 20](20-dynamic-blocks.md)).

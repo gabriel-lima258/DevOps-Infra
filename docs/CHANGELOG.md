@@ -2,6 +2,20 @@
 
 Registro do que mudou no código e quais docs foram atualizados. Mais recente no topo.
 
+## 2026-10-22 (módulo EC2: bastion e rancher)
+
+**Código**
+- Novo `modules/ec2/` (`main.tofu`, `security_group.tofu`, `variables.tofu`, `outputs.tofu`): chave, key pair, `.pem` em `path.root`, Elastic IP com `count = var.enabled_eip ? 1 : 0`, EC2 e SG com dynamic blocks a partir de `security_group_config` (object).
+- `ec2.tofu`: chama o módulo como `module "bastion"` e `module "rancher"`. O `security_group.tofu` da raiz foi removido. `local.tofu`: `bastion_security_group_config` (`!= null ? var : padrão`). `variables.tofu`: `bastion_security_group_config` (`default = null`), `keypair_name` → `algadelivery-bastion`. `outputs.tofu`: `module.bastion.*`.
+- 🔴 Validação: `validate`/`plan` ok, mas **o apply falharia**: bastion e rancher com o mesmo key pair, o mesmo SG `bastion-sg`, o mesmo `.pem` e a mesma tag.
+- **Corrigido (por pedido):** rancher com `name = "rancher"`, `keypair_name = "algadelivery-rancher"` e `local.rancher_security_group_config` (merge com `name = "rancher-sg"`); `["public"]["0"]` → `[0]`; output `public_ip` com ternário (funciona com `enabled_eip = false`); `tofu fmt` (`modules/ec2/outputs.tofu`). `validate` ✅, `fmt -check -recursive` ✅, o plan mostra nomes únicos.
+- `plan`: 41 add / 30 destroy. Com 23 `moved` (VPC) + 5 (bastion), testado com o state numa cópia: 17 add / 7 change / 5 destroy; o bastion é recriado (AMI, key pair e SG mudaram).
+
+**Docs**
+- Novo `23-modulo-ec2.md`: por que, estrutura, inputs/outputs, SG como `object` + dynamic, `default = null` + ternário, `merge` para o rancher, `count` no EIP, `path.root` x `path.module`, a chamada 2×, os conflitos e a correção, migração (5 `moved` + motivos da recriação), melhorias (validadas), prévia com `for_each` no módulo e pegadinhas.
+- Notas de "agora no módulo ec2" em 17, 19 e 20. `21`: reuso na prática. `10`: árvore com `modules/ec2`. `24-comandos.md` (ex-23). README.
+- `ARQUITETURA.md`: módulos bastion/rancher no diagrama, no ASCII e na tabela (41), fluxos SSH, pendências e histórico.
+
 ## 2026-10-22 (subnets em grupos: coleções e expressions)
 
 **Código**
