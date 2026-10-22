@@ -131,7 +131,8 @@ Acesso: `var.subnet_pub_config["public_a"].cidr_block` → `"172.25.1.0/24"`. De
 | `map(string)` | `{ a = "172.25.1.0/24" }` | `var.x["a"]` ou `var.x.a` |
 | `object({...})` | `{ cidr_block = "...", name = "..." }` | `var.x.cidr_block` |
 | `list(object({...}))` | lista de objetos (a 1ª versão) | `var.x[0].name` |
-| `map(object({...}))` | objetos com chave (o caso atual) | `var.x["public_a"].name`; ideal para `for_each` |
+| `map(map(object({...})))` | grupos de objetos (as subnets hoje, doc 22) | `var.x["management"]["pvt_mgmt_a"].az` |
+| `map(object({...}))` | objetos com chave | `var.x["public_a"].name`; ideal para `for_each` |
 
 O `type` faz o OpenTofu checar a estrutura: esquecer o campo `az` num item dá erro já no `plan`. Por que `map(object)` é melhor que `list(object)` para criar vários recursos: ver [13-loops-for-each-e-for.md](13-loops-for-each-e-for.md#por-que-mapa-e-não-lista).
 

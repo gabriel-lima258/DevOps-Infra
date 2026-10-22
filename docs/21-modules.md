@@ -2,6 +2,8 @@
 
 Visão geral de como tudo se conecta: [ARQUITETURA.md](ARQUITETURA.md).
 
+> **Atualização (2026-10-22):** os inputs de subnets viraram `subnet_pub_config` e `subnet_pvt_config` **agrupados** (`map(map(object))`), e as privadas viraram um único `aws_subnet.private`. Por isso o `moved.tofu` desta página **ficou desatualizado**: as chaves mudaram. Use o de [22-modulo-vpc-grupos-de-subnets.md](22-modulo-vpc-grupos-de-subnets.md#migração-do-state-moved-por-chave).
+
 > 🔴 **Antes do próximo `apply`, leia a seção [Refatorar sem destruir](#refatorar-sem-destruir-blocos-moved).** Do jeito que está, o `plan` quer **destruir e recriar a rede inteira**.
 
 ## O que é um módulo

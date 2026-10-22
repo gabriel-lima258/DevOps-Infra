@@ -1,4 +1,4 @@
-# 22. Cheat sheet de comandos
+# 23. Cheat sheet de comandos
 
 > Endereços com `for_each` levam aspas e colchetes: use aspas simples no terminal, ex.: `tofu state show 'aws_subnet.public["public_a"]'`.
 
@@ -100,6 +100,14 @@ tofu fmt -recursive                                    # formata também modules
 tofu state list | grep '^module\.'                      # recursos dentro de módulos
 tofu state show 'module.vpc.aws_subnet.public["public_a"]'
 tofu state mv 'aws_vpc.algadelivery' 'module.vpc.aws_vpc.main'   # alternativa ao bloco moved
+```
+
+## Coleções e expressions (doc 22 e types_expression.md)
+
+```bash
+echo 'keys(var.subnet_pvt_config)' | tofu console               # grupos de subnets privadas
+echo 'type(["texto", 42, true])' | tofu console                 # ver o tipo de um valor
+tofu output -json | python3 -m json.tool                        # outputs agrupados por grupo
 ```
 
 ## Outputs

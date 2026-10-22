@@ -2,6 +2,22 @@
 
 Registro do que mudou no código e quais docs foram atualizados. Mais recente no topo.
 
+## 2026-10-22 (subnets em grupos: coleções e expressions)
+
+**Código**
+- `subnet_pub_config` / `subnet_pvt_config` (raiz e módulo): `map(map(object({cidr_block, az})))` por grupo. Públicas: `public` (`pub_a/b/c`). Privadas: `management`, `cluster` e o novo **`database`** (`172.25.10-12.0/24`).
+- `modules/vpc/locals.tofu`: achatamento com `merge([for group, subnets in ... : { for k, s in subnets : k => merge(s, { group = group }) }]...)`.
+- `modules/vpc/main.tofu`: um único `aws_subnet.private` + `aws_route_table_association.private`; tags `pub-<grupo>-<az>` / `pvt-<grupo>-<az>`.
+- `modules/vpc/outputs.tofu`: `subnet_pub_ids/arns` e `subnet_pvt_ids/arns` como mapa grupo → lista. Raiz: o bastion usa `subnet_pub_ids["public"][0]`; outputs repassam public/management/cluster (sem database).
+- `validate` e `fmt -check -recursive` ok ✅.
+- 🔴 `plan`: 32 add / 27 destroy. Com 23 `moved` por chave (testado com o state baixado numa cópia, depois apagada): 8 add / 8 change / 3 destroy; o bastion seria **substituído por AMI nova** (`most_recent`).
+
+**Docs**
+- `types_expression.md` editado: correção da ordem de map/object (alfabética), tuple com `type()`, `set`, tipos aninhados, `merge`/`flatten`/`...`, for aninhado, agrupamento `=> v...`, resultados reais nos 10 exercícios + 6 extras, ligação com o projeto.
+- Novo `22-modulo-vpc-grupos-de-subnets.md`: o porquê, variável antes x depois, o achatamento passo a passo (saídas reais), um recurso para as privadas, outputs agrupados, migração com `moved` por chave (tabela + arquivo + resultado), o alerta da AMI, a `validation` de chaves únicas (testada) e as pegadinhas.
+- `21`: nota de `moved` desatualizado. `13` e `06`: links. `23-comandos.md` (ex-22). README (índice + material de apoio).
+- `ARQUITETURA.md`: grupo database no diagrama/ASCII/CIDRs, nomes novos, 35 recursos, pendências e histórico.
+
 ## 2026-10-20 (modules: vpc)
 
 **Código**

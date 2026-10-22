@@ -31,7 +31,9 @@ Como tudo se conecta hoje: VPC, subnets, gateways e o que ainda falta. Atualizad
 | 19 | [19-ec2-bastion-e-vm-privada.md](19-ec2-bastion-e-vm-privada.md) | EC2: AMI via data source, chave SSH (tls/local), bastion e VM privada, como acessar |
 | 20 | [20-dynamic-blocks.md](20-dynamic-blocks.md) | Dynamic blocks: regras de SG geradas por lista, padrões no local, revisão das regras |
 | 21 | [21-modules.md](21-modules.md) | Modules: inputs, outputs, escopo isolado, refatorar sem destruir (`moved`) |
-| 22 | [22-comandos.md](22-comandos.md) | Cheat sheet de comandos |
+| 22 | [22-modulo-vpc-grupos-de-subnets.md](22-modulo-vpc-grupos-de-subnets.md) | Módulo VPC com grupos de subnets: `map(map(object))`, achatamento com `merge(...)`, outputs agrupados, `moved` por chave |
+| 23 | [23-comandos.md](23-comandos.md) | Cheat sheet de comandos |
+| 📘 | [types_expression.md](types_expression.md) | Material de apoio (aula 04.04): tipos de coleção e for expressions, com exercícios |
 | — | [CHANGELOG.md](CHANGELOG.md) | Diário de estudo: o que mudou e quando |
 
 > Os docs 05 e 07 usam exemplos do bucket S3, que saiu do código. Ficam como referência dos conceitos.
@@ -45,10 +47,10 @@ devops/
 ├── ec2.tofu               # chave SSH + EC2 bastion + Elastic IP
 ├── local.tofu             # locals: context_name, ngw_regional_mode, internet_cidr_block, my_public_ip, common_tags
 ├── vpc.tofu               # chama o módulo de rede (module "vpc")
-├── variables.tofu         # região, ambiente, VPC, subnets, NAT, EC2, listas de regras do bastion
+├── variables.tofu         # região, ambiente, VPC, subnets agrupadas (map(map(object))), NAT, EC2, regras do bastion
 ├── security_group.tofu     # SG bastion_sg (regras via dynamic blocks)
 ├── outputs.tofu           # repassa outputs do módulo + bastion, SG, EIP, key pair
-├── modules/vpc/           # MÓDULO: VPC, 9 subnets, IGW, NAT regional, route tables
+├── modules/vpc/           # MÓDULO: VPC, 12 subnets em grupos, IGW, NAT regional, route tables
 ├── .terraform.lock.hcl    # versões travadas dos providers (vai pro git)
 ├── .terraform/            # providers + config do backend, gerados pelo init (fora do git)
 ├── .env                   # credenciais AWS (fora do git)
@@ -63,16 +65,16 @@ devops/
 - **Recursos:**
   - **No módulo `vpc`** (`module.vpc.*`, nomes lógicos `main`):
   - `aws_vpc.main` (`172.25.0.0/16`, tag `Name = algadelivery-vpc`)
-  - `aws_subnet.public["public_a|public_b|public_c"]` (`172.25.1-3.0/24` em `us-east-1a/b/c`, via `for_each`, nomes `algadelivery-pub-{a,b,c}`)
-  - `aws_subnet.private_management[...]` (`172.25.4-6.0/24`) e `aws_subnet.private_cluster[...]` (`172.25.7-9.0/24`)
+  - `aws_subnet.public["pub_a|pub_b|pub_c"]` (grupo `public`, `172.25.1-3.0/24`, nomes `algadelivery-pub-public-{a,b,c}`)
+  - `aws_subnet.private[...]`: grupos `management` (`172.25.4-6`), `cluster` (`172.25.7-9`) e `database` (`172.25.10-12`), nomes `algadelivery-pvt-<grupo>-{a,b,c}`
   - `aws_internet_gateway.algadelivery` (`algadelivery-igw`)
   - `aws_nat_gateway.algadelivery` (**regional**, 💲 pago por hora)
-  - `aws_route_table.public` (→ IGW) e `aws_route_table.private` (→ NAT) + 9 associations
+  - `aws_route_table.public` (→ IGW) e `aws_route_table.private` (→ NAT) + 12 associations
   - `aws_security_group.bastion` (regras via `dynamic`: SSH do seu IP, 80/443 da VPC)
   - `aws_instance.bastion` (pub-a, Ubuntu 22.04 `t3.micro`) + `aws_eip.bastion` (IP fixo)
   - `tls_private_key` + `aws_key_pair` + `local_sensitive_file` (chave `./algadelivery-iac.pem`, no `.gitignore` ✅)
 - **Outputs (raiz):** os de rede repassados de `module.vpc` (`vpc_id`, `subnet_public_ids`, `igw_id`, `ngw_id`, route tables…) + `security_group_bastion_id`, `bastion_id`, `bastion_arn`, `bastion_public_ip`, `keypair_arn`
-- **No código:** 29 recursos. 🔴 Adicione blocos `moved` antes do apply ([doc 21](21-modules.md#refatorar-sem-destruir-blocos-moved)). ⚠️ O NAT Gateway cobra por hora; veja as pendências em [ARQUITETURA.md](ARQUITETURA.md#pendências).
+- **No código:** 35 recursos. 🔴 Adicione os 23 blocos `moved` por chave antes do apply ([doc 22](22-modulo-vpc-grupos-de-subnets.md#migração-do-state-moved-por-chave)). ⚠️ O NAT Gateway cobra por hora; veja as pendências em [ARQUITETURA.md](ARQUITETURA.md#pendências).
 
 ## Rodando rápido
 

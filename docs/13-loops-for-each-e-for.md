@@ -208,6 +208,11 @@ moved {
 
 O plan passa a mostrar `has moved to` em vez de `-/+`. Depois do apply os blocos `moved` podem ser removidos. Neste estudo não foi preciso, porque a VPC tinha sido destruída antes e tudo foi criado do zero. Na refatoração para **módulos** o `moved` passou a ser essencial: sem ele, o plan recriava a rede inteira (26 add / 27 destroy). Ver [21-modules.md](21-modules.md#refatorar-sem-destruir-blocos-moved).
 
+## Para ir além
+
+- Tipos de coleção (list, tuple, set, map, object), for aninhado, `merge([...]...)` e exercícios: [types_expression.md](types_expression.md).
+- Esses conceitos aplicados ao módulo VPC (subnets em grupos): [22-modulo-vpc-grupos-de-subnets.md](22-modulo-vpc-grupos-de-subnets.md).
+
 ## Pegadinhas
 
 - **Mudar a chave do mapa** (`public_a` → `pub_a`) = destruir e recriar aquela subnet. A chave é a identidade.
