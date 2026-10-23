@@ -34,7 +34,8 @@ Como tudo se conecta hoje: VPC, subnets, gateways e o que ainda falta. Atualizad
 | 22 | [22-modulo-vpc-grupos-de-subnets.md](22-modulo-vpc-grupos-de-subnets.md) | Módulo VPC com grupos de subnets: `map(map(object))`, achatamento com `merge(...)`, outputs agrupados, `moved` por chave |
 | 23 | [23-modulo-ec2.md](23-modulo-ec2.md) | Módulo EC2: um módulo chamado 2× (bastion/rancher), SG como `object`, `count` no EIP, nomes únicos, migração |
 | 24 | [24-multiplos-ambientes.md](24-multiplos-ambientes.md) | Múltiplos ambientes: `envs/dev` e `envs/prod`, state por ambiente, como rodar, riscos |
-| 25 | [25-comandos.md](25-comandos.md) | Cheat sheet de comandos |
+| 25 | [25-lifecycle.md](25-lifecycle.md) | `lifecycle`: `ignore_changes`, `prevent_destroy`, `create_before_destroy`, `replace_triggered_by` |
+| 26 | [26-comandos.md](26-comandos.md) | Cheat sheet de comandos |
 | 📘 | [types_expression.md](types_expression.md) | Material de apoio (aula 04.04): tipos de coleção e for expressions, com exercícios |
 | — | [CHANGELOG.md](CHANGELOG.md) | Diário de estudo: o que mudou e quando |
 

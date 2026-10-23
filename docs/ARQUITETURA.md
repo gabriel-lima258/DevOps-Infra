@@ -1,6 +1,6 @@
 # Arquitetura atual
 
-> Diagrama vivo: atualizado a cada mudança no código. **Última atualização: 2026-10-22**, com a organização em **ambientes** (`envs/dev`, `envs/prod`).
+> Diagrama vivo: atualizado a cada mudança no código. **Última atualização: 2026-10-23**, com o `lifecycle` no módulo `ec2` (`ignore_changes`, `prevent_destroy`, `create_before_destroy`).
 > O diagrama mostra o ambiente **dev** (`envs/dev`, aplicado). O prod é idêntico, com a VPC `172.26.0.0/16` (ver [Ambientes](#ambientes)).
 > State do dev: `s3://algadelivery-tfstate-devops/algadelivery/development/remote.tfstate` · Região: `us-east-1`
 > **Situação:** dev **aplicado**: 35 recursos (29 em `module.vpc` + 6 em `module.bastion`), `tofu plan` → No changes. Prod ainda não inicializado. AWS conferida: sem recursos órfãos do código antigo.
@@ -184,10 +184,12 @@ Os IDs (`vpc-…`, `igw-…`, `rtb-…`) mudam a cada `destroy`/`apply`; consult
 2. ⚠️ **A key do backend vem de `var.environment`:** um `-var environment=...` na pasta errada aponta para o state do outro ambiente. Fixe a key por pasta ou trave com `validation` ([doc 24](24-multiplos-ambientes.md#1-a-key-do-backend-depende-de-uma-variável)).
 3. ⚠️ **Os envs já divergem** (nome do bastion, key pair, `[0]` x `["0"]`, rancher comentado diferente). Padronize ou afine os envs ([doc 24](24-multiplos-ambientes.md#2-código-duplicado-os-ambientes-já-divergiram)). O rancher comentado do dev tem `instance_type = "${var.environment}-${var.keypair_name}"`, um bug se for descomentado.
 4. Commitar a reorganização (`.tofu` da raiz apagados + `envs/` novo).
-5. Módulo `ec2`: `associate_public_ip_address = true` fixo; `key_name` via variável + `depends_on`; sem `ignore_changes = [ami]` (uma AMI nova recria o bastion); inputs sem `description`.
+5. Módulo `ec2`: `associate_public_ip_address = true` fixo; `key_name` via variável + `depends_on`; inputs sem `description`. ✅ AMI nova não recria mais (`ignore_changes = [ami]`).
+5a. ⚠️ **`prevent_destroy = true` bloqueia o `tofu destroy`** nos dois ambientes (testado: `Error: Resource instance cannot be destroyed`). Use uma variável por env ([doc 25](25-lifecycle.md#prevent_destroy-por-ambiente-com-variável)).
+5b. ⚠️ **`create_before_destroy` no SG com `name` fixo:** uma substituição criaria dois SGs com o mesmo nome (`InvalidGroup.Duplicate`). Use `name_prefix` (doc 25). `tofu fmt -recursive` pendente em `modules/ec2/main.tofu`.
 6. Chaves de subnets precisam ser únicas entre grupos (`validation`, doc 22). Grupo `database` fora dos outputs; as subnets database saem pelo NAT.
 7. Regras do SG: entrada 80/443 da VPC sem uso; saída 80 redundante (doc 20). O SSH usa o IP de quem roda o tofu (doc 18).
-8. 💲 Custos **por ambiente**: NAT (~US$ 0,045/h) + `t3.micro` + Elastic IP. Subir o prod dobra. `tofu destroy` em cada pasta ao terminar.
+8. 💲 Custos **por ambiente**: NAT (~US$ 0,045/h) + `t3.micro` + Elastic IP. Subir o prod dobra. `tofu destroy` em cada pasta ao terminar (hoje bloqueado pelo `prevent_destroy`, ver 5a).
 
 ## Histórico da arquitetura
 
@@ -201,6 +203,7 @@ Os IDs (`vpc-…`, `igw-…`, `rtb-…`) mudam a cada `destroy`/`apply`; consult
 | 2026-10-20 | Security Groups `bastion_sg` e `vm_private_sg` (SSH) · outputs dos IDs das route tables |
 | 2026-10-20 | Data source `http` (seu IP) → SSH do bastion só do seu IP `/32` · tags via `merge(local.common_tags, …)` · provider `http` |
 | 2026-10-20 | EC2 bastion (pub-a) e VM privada (mgmt-a) · AMI Ubuntu via `data.aws_ami` · chave SSH gerada (`tls` + `aws_key_pair` + `.pem` local) · providers `tls` e `local` |
+| 2026-10-23 | `lifecycle` no módulo `ec2`: instância com `ignore_changes = [ami]` + `prevent_destroy`; SG com `create_before_destroy` |
 | 2026-10-22 | **Ambientes**: root module movido para `envs/dev` e `envs/prod` (mesmos módulos, states `algadelivery/<env>/remote.tfstate`, VPCs `172.25` / `172.26`) · dev aplicado do zero · rancher comentado |
 | 2026-10-22 | Módulo **`modules/ec2`** (chave, key pair, `.pem`, SG com dynamic, EC2, EIP com `count`) chamado 2×: `bastion` e `rancher` · conflitos de nome corrigidos · `security_group.tofu` da raiz removido |
 | 2026-10-22 | Subnets em grupos (`map(map(object))`, achatadas com `merge([for ...]...)`) · `aws_subnet.private` único · grupo **database** (`172.25.10-12.0/24`) · outputs agrupados · tags `pub-public-*` / `pvt-<grupo>-*` |

@@ -265,6 +265,8 @@ O `tls_private_key` grava a chave privada **no state**, em texto puro, no S3 (do
 
 ### 3. A AMI nova vai querer recriar as EC2
 
+> ✅ **Resolvido:** o módulo `ec2` agora tem `lifecycle { ignore_changes = [ami] }`. Ver [25-lifecycle.md](25-lifecycle.md).
+
 Com `most_recent = true`, quando a Canonical publicar um build novo do Ubuntu (acontece com frequência), o próximo `plan` mostra:
 
 ```

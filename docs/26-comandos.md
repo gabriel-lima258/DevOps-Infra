@@ -1,4 +1,4 @@
-# 25. Cheat sheet de comandos
+# 26. Cheat sheet de comandos
 
 > Endereços com `for_each` levam aspas e colchetes: use aspas simples no terminal, ex.: `tofu state show 'aws_subnet.public["public_a"]'`.
 
@@ -126,6 +126,13 @@ tofu state list | grep -E '^module\.(bastion|rancher)'     # recursos de cada se
 tofu output bastion_public_ip                               # IP do bastion (Elastic IP)
 ssh -i algadelivery-bastion.pem ubuntu@IP_BASTION           # cada servidor tem seu .pem
 ssh -i algadelivery-rancher.pem ubuntu@IP_RANCHER
+```
+
+## Lifecycle (doc 25)
+
+```bash
+tofu plan -destroy                                        # simula o destroy (mostra se prevent_destroy bloqueia)
+tofu apply -replace='module.bastion.aws_instance.main'    # força a recriação (ex.: pegar a AMI nova)
 ```
 
 ## Outputs

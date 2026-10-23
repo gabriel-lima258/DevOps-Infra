@@ -193,6 +193,8 @@ Se for descomentado, o `instance_type` vira `"development-algadelivery-bastion"`
 
 Cada ambiente tem o próprio NAT Gateway, EIPs e EC2. Subir o prod **dobra** o custo. Em estudo: `tofu destroy` em cada pasta ao terminar.
 
+> ⚠️ Com `prevent_destroy = true` no módulo `ec2`, o `tofu destroy` **falha nos dois ambientes**. Use uma variável por ambiente (`false` no dev, `true` no prod): ver [25-lifecycle.md](25-lifecycle.md#prevent_destroy-por-ambiente-com-variável).
+
 ### 6. Commitar a reorganização
 
 O `git status` mostra os `.tofu` da raiz apagados e a pasta `envs/` nova, ainda sem commit. Faça o commit das duas coisas juntas. Os `.pem` e os `.terraform/` dentro de `envs/` já são ignorados pelo `.gitignore` (`*.pem`, `.terraform/`).

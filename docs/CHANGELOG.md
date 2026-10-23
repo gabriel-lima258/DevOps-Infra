@@ -2,6 +2,18 @@
 
 Registro do que mudou no código e quais docs foram atualizados. Mais recente no topo.
 
+## 2026-10-23 (lifecycle no módulo EC2)
+
+**Código**
+- `modules/ec2/main.tofu`: `aws_instance.main` com `lifecycle { prevent_destroy = true, ignore_changes = [ami] }`.
+- `modules/ec2/security_group.tofu`: `aws_security_group.main` com `lifecycle { create_before_destroy = true }`.
+- `envs/dev`: `validate` ok; `plan` → No changes. `tofu plan -destroy` → `Error: Resource instance cannot be destroyed` (prevent_destroy). `fmt -check` falha em `modules/ec2/main.tofu`.
+- Testado à parte (`terraform_data`, OpenTofu 1.13): `prevent_destroy` aceita variável.
+
+**Docs**
+- Novo `25-lifecycle.md`: o que é, as 4 opções com analogias, os 3 usos do projeto (`ignore_changes` resolve a AMI; `prevent_destroy` trava o destroy do estudo, com o erro real e a solução por variável testada; `create_before_destroy` + `name` fixo = conflito, com `name_prefix`), `replace_triggered_by`, pre/postconditions, resumo e pegadinhas.
+- `19` (AMI ✅), `23`, `24` (aviso do destroy), `26-comandos.md` (ex-25, com `plan -destroy` e `-replace`), README, `ARQUITETURA.md` (pendências e histórico).
+
 ## 2026-10-22 (múltiplos ambientes: envs/dev e envs/prod)
 
 **Código**

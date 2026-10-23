@@ -296,6 +296,8 @@ Testado numa cópia com o state real (baixado com `tofu state pull` e apagado de
 
 ## Melhorias sugeridas (ainda não aplicadas)
 
+> **Atualização:** o `lifecycle` foi aplicado no módulo: `ignore_changes = [ami]` e `prevent_destroy = true` na instância, `create_before_destroy = true` no SG. Efeitos e cuidados em [25-lifecycle.md](25-lifecycle.md).
+
 Testadas com `tofu validate` numa cópia:
 
 ```hcl
