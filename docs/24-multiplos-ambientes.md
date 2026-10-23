@@ -179,6 +179,8 @@ Para estudo, as pastas por env são ótimas, porque deixam a separação explíc
 
 ### 3. Nomes inconsistentes entre os envs
 
+> **RDS:** o `db_subnet_group_name` e o `db_parameter_group_name` são **iguais** em dev e prod, e são únicos por conta/região: o apply do segundo ambiente falharia. Além disso, o provider `random` foi adicionado só em `envs/dev`. Ver [26-modulo-rds.md](26-modulo-rds.md).
+
 Defina um padrão único, por exemplo `"${var.environment}-${local.context_name}-<recurso>"`, e aplique nos dois. Key pairs são únicos **por região da conta**: hoje não colidem (`development-algadelivery-bastion` x `algadelivery-bastion`), mas o de prod não tem o prefixo do ambiente.
 
 ### 4. Bug no rancher comentado (dev)

@@ -59,4 +59,29 @@ locals {
     name        = "rancher-sg"
     description = "Security group for rancher host"
   })
+
+  db_security_group_config = var.db_security_group_config != null ? var.db_security_group_config : {
+    name        = "${var.environment}-${local.context_name}-db-sg"
+    description = "Security group for DB instance"
+    ingress_rules = [
+      {
+        description = "PostgreSQL para VPC"
+        from_port   = local.db_port
+        to_port     = local.db_port
+        protocol    = "tcp"
+        cidr_blocks = [var.vpc_cidr_block]
+      }
+    ]
+    egress_rules = [
+      {
+        description = "Todo o trafego de saida"
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = [local.internet_cidr_block]
+      }
+    ]
+  }
+
+  db_port = 5432
 }

@@ -1,4 +1,4 @@
-# 26. Cheat sheet de comandos
+# 27. Cheat sheet de comandos
 
 > Endereços com `for_each` levam aspas e colchetes: use aspas simples no terminal, ex.: `tofu state show 'aws_subnet.public["public_a"]'`.
 
@@ -133,6 +133,20 @@ ssh -i algadelivery-rancher.pem ubuntu@IP_RANCHER
 ```bash
 tofu plan -destroy                                        # simula o destroy (mostra se prevent_destroy bloqueia)
 tofu apply -replace='module.bastion.aws_instance.main'    # força a recriação (ex.: pegar a AMI nova)
+```
+
+## RDS (doc 26)
+
+```bash
+aws secretsmanager get-secret-value --secret-id "$(tofu output -raw db_password_secret_arn)" \
+  --query SecretString --output text                                   # senha do banco
+ssh -i development-algadelivery-bastion.pem -N \
+  -L 5432:$(tofu output -raw db_endpoint | cut -d: -f1):5432 \
+  ubuntu@$(tofu output -raw bastion_public_ip)                          # túnel pelo bastion
+psql -h localhost -p 5432 -U postgres -d delivery                       # em outro terminal
+aws rds describe-db-instances --db-instance-identifier development-algadelivery-db \
+  --query 'DBInstances[0].DBInstanceStatus'                             # status (creating, available…)
+aws rds reboot-db-instance --db-instance-identifier development-algadelivery-db   # aplica pending-reboot
 ```
 
 ## Outputs

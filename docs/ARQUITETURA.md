@@ -1,9 +1,9 @@
 # Arquitetura atual
 
-> Diagrama vivo: atualizado a cada mudança no código. **Última atualização: 2026-10-23**, com o `lifecycle` no módulo `ec2` (`ignore_changes`, `prevent_destroy`, `create_before_destroy`).
+> Diagrama vivo: atualizado a cada mudança no código. **Última atualização: 2026-10-23**, com o **módulo `rds`** (PostgreSQL 18 nas subnets database).
 > O diagrama mostra o ambiente **dev** (`envs/dev`, aplicado). O prod é idêntico, com a VPC `172.26.0.0/16` (ver [Ambientes](#ambientes)).
 > State do dev: `s3://algadelivery-tfstate-devops/algadelivery/development/remote.tfstate` · Região: `us-east-1`
-> **Situação:** dev **aplicado**: 35 recursos (29 em `module.vpc` + 6 em `module.bastion`), `tofu plan` → No changes. Prod ainda não inicializado. AWS conferida: sem recursos órfãos do código antigo.
+> **Situação:** dev **aplicado** com 35 recursos (29 em `module.vpc` + 6 em `module.bastion`); o `module.database` (RDS, 4 recursos) está no código e o `plan` mostra **4 to add** (ainda não aplicado). Prod: não inicializado.
 
 ## Ambientes
 
@@ -42,6 +42,7 @@ flowchart TB
             mgmtB["pvt-management-b<br/>172.25.5.0/24"]
             clB["pvt-cluster-b<br/>172.25.8.0/24"]
             dbB["pvt-database-b<br/>172.25.11.0/24"]
+            rds[("module.database · RDS PostgreSQL 18<br/>development-algadelivery-db<br/>db.t4g.micro · 20 GB · porta 5432")]
         end
         subgraph azc["AZ us-east-1c"]
             pubC["pub-public-c<br/>172.25.3.0/24"]
@@ -72,6 +73,10 @@ flowchart TB
     rtPvt --> ngw
 
     ec2B --- pubA
+    rds --- dbA
+    rds --- dbB
+    rds --- dbC
+    ec2B -.->|"5432 (túnel SSH)"| rds
     eip --- ec2B
     sgB -.- ec2B
 
@@ -82,6 +87,7 @@ flowchart TB
     classDef rt fill:#f1f5f9,stroke:#475569,color:#111
     classDef sg fill:#ffe4e6,stroke:#e11d48,color:#111
     classDef db fill:#fce7f3,stroke:#db2777,color:#111
+    classDef rdsc fill:#e0f2fe,stroke:#0369a1,color:#111,stroke-width:2px
     classDef ec2 fill:#fff7ed,stroke:#ea580c,color:#111,stroke-width:2px
 
     class pubA,pubB,pubC pub
@@ -92,6 +98,7 @@ flowchart TB
     class rtPub,rtPvt,rtNat rt
     class sgB sg
     class ec2B,eip ec2
+    class rds rdsc
     style mod fill:transparent,stroke:#64748b,stroke-dasharray:6 4
 ```
 
@@ -126,6 +133,8 @@ flowchart TB
 │  module.bastion: EC2 bastion (pub-a) + EIP + SG bastion-sg + key/.pem      │
 │  (module.rancher está comentado nos dois ambientes)                        │
 │  SGs: in 22 do SEU IP · 80/443 da VPC · out tudo                            │
+│  module.database: RDS PostgreSQL 18 no subnet group database (a,b,c),       │
+│                   SG db-sg: in 5432 da VPC · senha no Secrets Manager       │
 │        você ──SSH──► Elastic IP ──► bastion                                 │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -144,7 +153,8 @@ flowchart TB
 | Associations públicas | `module.vpc.aws_route_table_association.public[...]` | 3 subnets → rt-public | 3 |
 | Associations privadas | `module.vpc.aws_route_table_association.private[...]` | 9 subnets → rt-private | 9 |
 | **module.bastion** (`modules/ec2`) | `module.bastion.aws_instance.main` · `.aws_eip.main[0]` · `.aws_security_group.main` · `.aws_key_pair.main` · `.tls_private_key.main` · `.local_sensitive_file.private_key` | EC2 `bastion` (pub-a, `t3.micro`) · SG `bastion-sg` · key `development-algadelivery-bastion` · `envs/dev/development-algadelivery-bastion.pem` · 💲 | 6 |
-| **Total (dev)** | | | **35** |
+| **module.database** (`modules/rds`) | `module.database.aws_db_instance.main` · `.aws_db_subnet_group.main` · `.aws_db_parameter_group.main` · `.aws_security_group.main` | RDS `development-algadelivery-db` (PostgreSQL 18, `db.t4g.micro`, 20 GB) · subnet group nas 3 subnets database · parameter group `postgres18` · SG 5432 · 💲 · ⏳ não aplicado | 4 |
+| **Total (dev)** | | | **39** (35 aplicados + 4 planejados) |
 
 `module.rancher` está comentado em `envs/dev/ec2.tofu` e `envs/prod/ec2.tofu`.
 
@@ -173,6 +183,7 @@ Os IDs (`vpc-…`, `igw-…`, `rtb-…`) mudam a cada `destroy`/`apply`; consult
 | Internet → recurso público (ex.: ALB) | Internet → IGW → rt-public → subnet pública | ✅ se o recurso tiver IP público + security group liberando |
 | Internet → subnet privada | não existe, **por design** | 🔒 bloqueado, como deve ser |
 | Entre subnets da VPC | rota `local` automática em todas as tabelas | ✅ (rota) · a porta depende do SG de destino |
+| Bastion/app → RDS | recurso da VPC → rota `local` → RDS (`db-sg`: 5432 de `172.25.0.0/16`) | ⏳ após o apply · da sua máquina: túnel `ssh -L 5432:<endpoint>:5432` pelo bastion (doc 26) |
 | SSH: você → bastion | Seu IP → IGW → rt-public → Elastic IP → EC2 bastion (`bastion_sg`: 22 só do seu IP `/32`) | ✅ (em `envs/dev`) `ssh -i development-algadelivery-bastion.pem ubuntu@ELASTIC_IP` |
 | SSH: bastion → VM privada | — | ⏸️ a VM privada saiu do código |
 
@@ -180,7 +191,8 @@ Os IDs (`vpc-…`, `igw-…`, `rtb-…`) mudam a cada `destroy`/`apply`; consult
 
 > Data sources (`data.http.my_public_ip`, `data.aws_ami.ubuntu`) não aparecem no diagrama: não são recursos, só leituras.
 
-1. ⏸️ **Prod:** `cd envs/prod && tofu init -reconfigure` (o `.terraform/` foi copiado e aponta para o backend antigo).
+0. 🔴 **RDS: nomes sem o ambiente** (`algadelivery-db-subnet-group` e `algadelivery-db-parameter-group` são únicos por conta/região): o apply do 2º ambiente falha. Prefixe com `${var.environment}` ([doc 26](26-modulo-rds.md#1--nomes-sem-o-ambiente-o-prod-vai-colidir-com-o-dev)). Também: tag `Name` do banco = nome do parameter group; `storage_encrypted`/`deletion_protection` ausentes; `db_multi_az`, `db_port` e o provider `random` (só no dev) sem uso; as subnets database saem pelo NAT.
+1. ⏸️ **Prod:** `cd envs/prod && tofu init -reconfigure` (o `.terraform/` foi copiado e aponta para o backend antigo; agora também falta instalar o `module "database"`).
 2. ⚠️ **A key do backend vem de `var.environment`:** um `-var environment=...` na pasta errada aponta para o state do outro ambiente. Fixe a key por pasta ou trave com `validation` ([doc 24](24-multiplos-ambientes.md#1-a-key-do-backend-depende-de-uma-variável)).
 3. ⚠️ **Os envs já divergem** (nome do bastion, key pair, `[0]` x `["0"]`, rancher comentado diferente). Padronize ou afine os envs ([doc 24](24-multiplos-ambientes.md#2-código-duplicado-os-ambientes-já-divergiram)). O rancher comentado do dev tem `instance_type = "${var.environment}-${var.keypair_name}"`, um bug se for descomentado.
 4. Commitar a reorganização (`.tofu` da raiz apagados + `envs/` novo).
@@ -189,7 +201,7 @@ Os IDs (`vpc-…`, `igw-…`, `rtb-…`) mudam a cada `destroy`/`apply`; consult
 5b. ⚠️ **`create_before_destroy` no SG com `name` fixo:** uma substituição criaria dois SGs com o mesmo nome (`InvalidGroup.Duplicate`). Use `name_prefix` (doc 25). `tofu fmt -recursive` pendente em `modules/ec2/main.tofu`.
 6. Chaves de subnets precisam ser únicas entre grupos (`validation`, doc 22). Grupo `database` fora dos outputs; as subnets database saem pelo NAT.
 7. Regras do SG: entrada 80/443 da VPC sem uso; saída 80 redundante (doc 20). O SSH usa o IP de quem roda o tofu (doc 18).
-8. 💲 Custos **por ambiente**: NAT (~US$ 0,045/h) + `t3.micro` + Elastic IP. Subir o prod dobra. `tofu destroy` em cada pasta ao terminar (hoje bloqueado pelo `prevent_destroy`, ver 5a).
+8. 💲 Custos **por ambiente**: NAT (~US$ 0,045/h) + `t3.micro` + Elastic IP. + RDS `db.t4g.micro` (~US$ 0,016/h) + Secrets Manager. Subir o prod dobra. `tofu destroy` em cada pasta ao terminar (hoje bloqueado pelo `prevent_destroy`, ver 5a).
 
 ## Histórico da arquitetura
 
@@ -203,6 +215,7 @@ Os IDs (`vpc-…`, `igw-…`, `rtb-…`) mudam a cada `destroy`/`apply`; consult
 | 2026-10-20 | Security Groups `bastion_sg` e `vm_private_sg` (SSH) · outputs dos IDs das route tables |
 | 2026-10-20 | Data source `http` (seu IP) → SSH do bastion só do seu IP `/32` · tags via `merge(local.common_tags, …)` · provider `http` |
 | 2026-10-20 | EC2 bastion (pub-a) e VM privada (mgmt-a) · AMI Ubuntu via `data.aws_ami` · chave SSH gerada (`tls` + `aws_key_pair` + `.pem` local) · providers `tls` e `local` |
+| 2026-10-23 | Módulo **`modules/rds`**: `module.database` (PostgreSQL 18, subnet group nas subnets database, parameter group com `dynamic`, SG 5432, senha no Secrets Manager) · ⏳ não aplicado |
 | 2026-10-23 | `lifecycle` no módulo `ec2`: instância com `ignore_changes = [ami]` + `prevent_destroy`; SG com `create_before_destroy` |
 | 2026-10-22 | **Ambientes**: root module movido para `envs/dev` e `envs/prod` (mesmos módulos, states `algadelivery/<env>/remote.tfstate`, VPCs `172.25` / `172.26`) · dev aplicado do zero · rancher comentado |
 | 2026-10-22 | Módulo **`modules/ec2`** (chave, key pair, `.pem`, SG com dynamic, EC2, EIP com `count`) chamado 2×: `bastion` e `rancher` · conflitos de nome corrigidos · `security_group.tofu` da raiz removido |

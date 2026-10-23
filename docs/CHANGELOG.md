@@ -2,6 +2,18 @@
 
 Registro do que mudou no código e quais docs foram atualizados. Mais recente no topo.
 
+## 2026-10-23 (módulo RDS)
+
+**Código**
+- Novo `modules/rds/`: `aws_db_subnet_group`, `aws_db_parameter_group` (`family = "${engine}${version}"` → `postgres18`, `dynamic "parameter"` sobre um mapa, `pending-reboot`), `aws_db_instance` (`manage_master_user_password`, `multi_az = false`, `apply_immediately`) e o SG (object + dynamic + `create_before_destroy`). Outputs: ARN do segredo, endpoint, id, arn.
+- `envs/{dev,prod}`: `rds.tofu` (`module "database"`, subnets `module.vpc.subnet_pvt_ids["database"]`), 13 variáveis `db_*` (PostgreSQL 18, `db.t4g.micro`, 20 GB, `max_connections`, `pg_stat_statements`, `pgaudit`), `db_security_group_config` + `db_port` no local, outputs repassados. `envs/dev/providers.tofu`: provider `random` (sem uso).
+- dev: `validate` ✅, `plan` = 4 to add. A AWS oferece o PostgreSQL 18 (`18.3`, família `postgres18`). prod: `Module not installed` → `init -reconfigure`. `fmt -check` falha em `modules/ec2/main.tofu` e `envs/prod/local.tofu`.
+- ⚠️ Subnet group e parameter group sem o prefixo do ambiente (colidem entre dev e prod); tag `Name` do banco errada; sem `storage_encrypted`/`deletion_protection`; `db_multi_az`/`db_port`/`random` sem uso. Ainda sem commit.
+
+**Docs**
+- Novo `26-modulo-rds.md`: RDS x EC2, as 4 peças e a ordem, passos 1–6 (subnet group, parameter group, SG, instância com tabela de "por quê", chamada no env, outputs + senha no Secrets Manager + túnel SSH e `psql`), plan real, validação, revisão em 7 pontos (snippets validados), custos e pegadinhas.
+- `ARQUITETURA.md`: RDS no Mermaid e no ASCII, tabela (39), fluxo até o banco, pendências e histórico. `15`, `22`, `24` (notas), `10` (árvore), `27-comandos.md` (ex-26, com comandos de RDS), README.
+
 ## 2026-10-23 (lifecycle no módulo EC2)
 
 **Código**

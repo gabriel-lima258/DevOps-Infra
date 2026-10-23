@@ -86,3 +86,19 @@ output "security_group_bastion_id" {
   description = "The ID of the bastion security group"
   value       = module.bastion.security_group_id
 }
+
+output "db_password_secret_arn" {
+  value = module.database.db_password_secret_arn
+}
+
+output "db_endpoint" {
+  value = module.database.db_endpoint
+}
+
+output "db_instance_id" {
+  value = module.database.db_instance_id
+}
+
+output "db_instance_arn" {
+  value = module.database.db_instance_arn
+}

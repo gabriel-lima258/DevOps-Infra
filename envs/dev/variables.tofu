@@ -104,3 +104,108 @@ variable "bastion_security_group_config" {
   })
   default = null
 }
+
+variable "db_subnet_group_name" {
+  description = "The name of the DB subnet group"
+  type        = string
+  default     = "algadelivery-db-subnet-group"
+}
+
+variable "db_parameter_group_name" {
+  description = "The name of the DB parameter group"
+  type        = string
+  default     = "algadelivery-db-parameter-group"
+}
+
+variable "db_parameter_group_options" {
+  description = "The options for the DB parameter group"
+  type        = map(string)
+  default = {
+    max_connections          = "300"
+    shared_preload_libraries = "pg_stat_statements,pgaudit"
+  }
+
+}
+
+variable "db_engine" {
+  description = "The database engine to use"
+  type        = string
+  default     = "postgres"
+}
+
+variable "db_engine_version" {
+  description = "The version of the database engine to use"
+  type        = string
+  default     = "18"
+}
+
+variable "db_name" {
+  description = "Db Name"
+  type        = string
+  default     = "delivery"
+}
+
+variable "db_instance_class" {
+  description = "The instance class for the DB instance"
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "db_username" {
+  description = "The username for the DB instance"
+  type        = string
+  default     = "postgres"
+}
+
+variable "db_storage" {
+  description = "The amount of storage to allocate for the DB instance"
+  type        = number
+  default     = 20
+}
+
+variable "db_multi_az" {
+  description = "Whether to create a Multi-AZ DB instance"
+  type        = bool
+  default     = false
+}
+
+variable "db_skip_final_snapshot" {
+  description = "Whether to skip the final snapshot when deleting the DB instance"
+  type        = bool
+  default     = true
+}
+
+variable "db_identifier" {
+  description = "The identifier for the DB instance"
+  type        = string
+  default     = "algadelivery-db"
+}
+
+variable "db_port" {
+  description = "Db port"
+  type        = number
+  default     = 5432
+}
+
+variable "db_security_group_config" {
+  description = "The security group configuration for the DB instance"
+  type = object({
+    name        = string
+    description = string
+    ingress_rules = list(object({
+      description = string
+      from_port   = number
+      to_port     = number
+      protocol    = string
+      cidr_blocks = list(string)
+    }))
+    egress_rules = list(object({
+      description = string
+      from_port   = number
+      to_port     = number
+      protocol    = string
+      cidr_blocks = list(string)
+    }))
+  })
+  default = null
+}

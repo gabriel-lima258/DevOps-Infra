@@ -12,7 +12,9 @@ devops/
 ├── modules/
 │   ├── vpc/                # MÓDULO: VPC, 12 subnets em grupos, IGW, NAT, route tables (docs 21-22)
 │   │   ├── main.tofu, variables.tofu, outputs.tofu, locals.tofu
-│   └── ec2/                # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (doc 23)
+│   ├── ec2/                # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (doc 23)
+│   │   ├── main.tofu, security_group.tofu, variables.tofu, outputs.tofu
+│   └── rds/                # MÓDULO: subnet group, parameter group, SG, RDS PostgreSQL (doc 26)
 │       ├── main.tofu, security_group.tofu, variables.tofu, outputs.tofu
 └── envs/
     ├── dev/                # root module do ambiente development
@@ -20,6 +22,7 @@ devops/
     │   ├── data.tofu       # data sources: seu IP, AMI Ubuntu
     │   ├── vpc.tofu        # CHAMA modules/vpc (source = "../../modules/vpc")
     │   ├── ec2.tofu        # CHAMA modules/ec2 (bastion; rancher comentado)
+    │   ├── rds.tofu        # CHAMA modules/rds (module "database")
     │   ├── local.tofu      # context_name, my_public_ip, common_tags, configs de SG
     │   ├── variables.tofu  # valores do ambiente (environment, CIDRs, subnets...)
     │   ├── outputs.tofu    # repassa outputs dos módulos

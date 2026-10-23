@@ -1,5 +1,7 @@
 # 22. Módulo VPC com grupos de subnets (coleções e expressions na prática)
 
+> **Atualização (RDS):** o grupo `database` agora recebe o banco PostgreSQL do `module.database` (subnet group nas 3 subnets). Ver [26-modulo-rds.md](26-modulo-rds.md).
+
 > **Atualização (ambientes):** a migração com blocos `moved` descrita aqui **não foi necessária na prática**. Com a reorganização em `envs/` (doc 24), o ambiente dev foi criado do zero num state novo (`algadelivery/development/remote.tfstate`), e a AWS foi conferida sem recursos órfãos do código antigo. O conteúdo continua válido como conceito, para quando a infraestrutura não puder ser recriada.
 
 Visão geral: [ARQUITETURA.md](ARQUITETURA.md) · Teoria dos tipos e for expressions: [types_expression.md](types_expression.md)

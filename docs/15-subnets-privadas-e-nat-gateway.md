@@ -1,5 +1,7 @@
 # 15. Subnets privadas e NAT Gateway
 
+> **Atualização (RDS):** o grupo `database` agora recebe o banco PostgreSQL do `module.database` (subnet group nas 3 subnets). Ver [26-modulo-rds.md](26-modulo-rds.md).
+
 > **Atualização (módulos):** este código agora mora em `modules/vpc/main.tofu`, com endereços `module.vpc.aws_*.main` (antes: `aws_*.algadelivery`). Os trechos abaixo mostram a versão anterior; os conceitos são os mesmos. Ver [21-modules.md](21-modules.md).
 
 Visão geral de como tudo se conecta: [ARQUITETURA.md](ARQUITETURA.md).

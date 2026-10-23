@@ -35,7 +35,8 @@ Como tudo se conecta hoje: VPC, subnets, gateways e o que ainda falta. Atualizad
 | 23 | [23-modulo-ec2.md](23-modulo-ec2.md) | Módulo EC2: um módulo chamado 2× (bastion/rancher), SG como `object`, `count` no EIP, nomes únicos, migração |
 | 24 | [24-multiplos-ambientes.md](24-multiplos-ambientes.md) | Múltiplos ambientes: `envs/dev` e `envs/prod`, state por ambiente, como rodar, riscos |
 | 25 | [25-lifecycle.md](25-lifecycle.md) | `lifecycle`: `ignore_changes`, `prevent_destroy`, `create_before_destroy`, `replace_triggered_by` |
-| 26 | [26-comandos.md](26-comandos.md) | Cheat sheet de comandos |
+| 26 | [26-modulo-rds.md](26-modulo-rds.md) | Módulo RDS: PostgreSQL gerenciado passo a passo (subnet group, parameter group, SG, instância, senha, túnel) |
+| 27 | [27-comandos.md](27-comandos.md) | Cheat sheet de comandos |
 | 📘 | [types_expression.md](types_expression.md) | Material de apoio (aula 04.04): tipos de coleção e for expressions, com exercícios |
 | — | [CHANGELOG.md](CHANGELOG.md) | Diário de estudo: o que mudou e quando |
 
@@ -49,7 +50,8 @@ devops/
 ├── .gitignore             # .env, .terraform/, *.tfstate, *.pem...
 ├── modules/
 │   ├── vpc/               # MÓDULO: VPC, 12 subnets em grupos, IGW, NAT regional, route tables
-│   └── ec2/               # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (count)
+│   ├── ec2/               # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (count)
+│   └── rds/               # MÓDULO: subnet group, parameter group, SG, RDS PostgreSQL
 ├── envs/
 │   ├── dev/               # ambiente development (root module): providers, data, vpc, ec2, local, variables, outputs
 │   └── prod/              # ambiente production: mesmos arquivos, valores de prod
@@ -65,7 +67,7 @@ devops/
 | `envs/dev` | `algadelivery/development/remote.tfstate` | `172.25.0.0/16` | ✅ aplicado: 35 recursos (`module.vpc` + `module.bastion`), plan sem mudanças |
 | `envs/prod` | `algadelivery/production/remote.tfstate` | `172.26.0.0/16` | ⏸️ rode `tofu init -reconfigure` antes do primeiro plan |
 
-- **Em cada ambiente:** `module.vpc` (VPC, 3 públicas + 9 privadas em grupos management/cluster/database, IGW, NAT regional 💲, route tables) e `module.bastion` (EC2 Ubuntu `t3.micro`, Elastic IP, SG via `dynamic`, key pair + `.pem`). `module.rancher` está comentado.
+- **Em cada ambiente:** `module.vpc` (VPC, 3 públicas + 9 privadas em grupos management/cluster/database, IGW, NAT regional 💲, route tables) e `module.bastion` (EC2 Ubuntu `t3.micro`, Elastic IP, SG via `dynamic`, key pair + `.pem`). `module.database` (RDS PostgreSQL 18 `db.t4g.micro` nas subnets database, senha no Secrets Manager; ⏳ no dev o `plan` mostra 4 to add). `module.rancher` está comentado.
 - Pendências e riscos: [ARQUITETURA.md](ARQUITETURA.md#pendências).
 
 ## Rodando rápido
