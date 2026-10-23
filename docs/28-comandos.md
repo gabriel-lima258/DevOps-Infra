@@ -1,4 +1,4 @@
-# 27. Cheat sheet de comandos
+# 28. Cheat sheet de comandos
 
 > Endereços com `for_each` levam aspas e colchetes: use aspas simples no terminal, ex.: `tofu state show 'aws_subnet.public["public_a"]'`.
 
@@ -153,6 +153,21 @@ aws rds restore-db-instance-to-point-in-time \
   --source-db-instance-identifier development-algadelivery-db \
   --target-db-instance-identifier development-algadelivery-db-restore \
   --restore-time 2026-10-23T12:00:00Z                                   # restore cria OUTRA instância
+```
+
+## ElastiCache Valkey (doc 27)
+
+```bash
+tofu output -raw elasticache_endpoint_address                           # endpoint do cache
+aws elasticache describe-serverless-caches \
+  --serverless-cache-name development-algadelivery-valkey \
+  --query 'ServerlessCaches[0].[Status,Endpoint.Address]'               # status (creating, available…)
+aws elasticache describe-cache-engine-versions --engine valkey \
+  --query 'CacheEngineVersions[].EngineVersion'                         # versões disponíveis
+ssh -i development-algadelivery-bastion.pem -N \
+  -L 6379:$(tofu output -raw elasticache_endpoint_address):6379 \
+  ubuntu@$(tofu output -raw bastion_public_ip)                          # túnel pelo bastion
+redis-cli --tls --insecure -h localhost -p 6379 PING                    # em outro terminal → PONG (TLS obrigatório)
 ```
 
 ## Outputs

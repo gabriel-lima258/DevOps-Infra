@@ -14,7 +14,9 @@ devops/
 │   │   ├── main.tofu, variables.tofu, outputs.tofu, locals.tofu
 │   ├── ec2/                # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (doc 23)
 │   │   ├── main.tofu, security_group.tofu, variables.tofu, outputs.tofu
-│   └── rds/                # MÓDULO: subnet group, parameter group, SG, RDS PostgreSQL (doc 26)
+│   ├── rds/                # MÓDULO: subnet group, parameter group, SG, RDS PostgreSQL (doc 26)
+│   │   ├── main.tofu, security_group.tofu, variables.tofu, outputs.tofu
+│   └── elasticache/        # MÓDULO: SG + ElastiCache Serverless Valkey (doc 27)
 │       ├── main.tofu, security_group.tofu, variables.tofu, outputs.tofu
 └── envs/
     ├── dev/                # root module do ambiente development
@@ -23,6 +25,7 @@ devops/
     │   ├── vpc.tofu        # CHAMA modules/vpc (source = "../../modules/vpc")
     │   ├── ec2.tofu        # CHAMA modules/ec2 (bastion; rancher comentado)
     │   ├── rds.tofu        # CHAMA modules/rds (module "database")
+    │   ├── elasticache.tofu # CHAMA modules/elasticache (module "elasticache")
     │   ├── local.tofu      # context_name, my_public_ip, common_tags, configs de SG
     │   ├── variables.tofu  # valores do ambiente (environment, CIDRs, subnets...)
     │   ├── outputs.tofu    # repassa outputs dos módulos

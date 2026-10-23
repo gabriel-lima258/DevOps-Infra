@@ -20,13 +20,16 @@ devops/
 ├── .env                        ← credenciais (compartilhadas)
 ├── modules/                    ← o "código" (compartilhado pelos dois)
 │   ├── vpc/
-│   └── ec2/
+│   ├── ec2/
+│   ├── rds/
+│   └── elasticache/
 └── envs/                       ← os "ambientes" (um root module cada)
     ├── dev/
     │   ├── providers.tofu      ← backend: algadelivery/development/remote.tfstate
     │   ├── variables.tofu      ← environment = "development", VPC 172.25.0.0/16
     │   ├── vpc.tofu            ← module "vpc" { source = "../../modules/vpc" }
     │   ├── ec2.tofu            ← module "bastion" { source = "../../modules/ec2" }
+    │   ├── rds.tofu, elasticache.tofu ← module "database" / module "elasticache"
     │   ├── data.tofu, local.tofu, outputs.tofu
     │   ├── .terraform.lock.hcl ← próprio
     │   ├── .terraform/         ← próprio (fora do git)
@@ -37,7 +40,7 @@ devops/
 
 | Compartilhado | De cada ambiente |
 |---------------|------------------|
-| `modules/vpc`, `modules/ec2` (a "receita") | `variables.tofu` (os valores) |
+| `modules/vpc`, `modules/ec2`, `modules/rds`, `modules/elasticache` (a "receita") | `variables.tofu` (os valores) |
 | `.env` (credenciais) | o **state** (key no S3) |
 | | `.terraform/`, `.terraform.lock.hcl` |
 | | o `.pem` (gerado em `path.root`, a pasta do env, doc 23) |
@@ -195,7 +198,7 @@ Se for descomentado, o `instance_type` vira `"development-algadelivery-bastion"`
 
 Cada ambiente tem o próprio NAT Gateway, EIPs e EC2. Subir o prod **dobra** o custo. Em estudo: `tofu destroy` em cada pasta ao terminar.
 
-> ⚠️ Com `prevent_destroy = true` no módulo `ec2`, o `tofu destroy` **falha nos dois ambientes**. Use uma variável por ambiente (`false` no dev, `true` no prod): ver [25-lifecycle.md](25-lifecycle.md#prevent_destroy-por-ambiente-com-variável).
+> ⚠️ O `prevent_destroy` do módulo `ec2` hoje está `false`, mas o novo módulo `elasticache` tem `prevent_destroy = true` fixo: o `tofu destroy` **volta a falhar nos dois ambientes**. Use uma variável por ambiente (`false` no dev, `true` no prod): ver [25-lifecycle.md](25-lifecycle.md#prevent_destroy-por-ambiente-com-variável).
 
 ### 6. Commitar a reorganização
 

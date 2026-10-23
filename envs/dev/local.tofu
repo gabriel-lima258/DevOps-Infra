@@ -53,13 +53,6 @@ locals {
     ]
   }
 
-  # o rancher reaproveita as regras do bastion, com nome proprio
-  # (nome de security group precisa ser unico dentro da VPC)
-  rancher_security_group_config = merge(local.bastion_security_group_config, {
-    name        = "rancher-sg"
-    description = "Security group for rancher host"
-  })
-
   db_security_group_config = var.db_security_group_config != null ? var.db_security_group_config : {
     name        = "${var.environment}-${local.context_name}-db-sg"
     description = "Security group for DB instance"
@@ -84,4 +77,27 @@ locals {
   }
 
   db_port = 5432
+
+  cache_security_group_config = var.elasticache_security_group_config != null ? var.elasticache_security_group_config : {
+    name        = "${var.environment}-${local.context_name}-valkey-sg"
+    description = "Security group for ElastiCache Serverless Valkey in ${var.environment}"
+    ingress_rules = [
+      {
+        description = "Valkey da VPC"
+        from_port   = 6379
+        to_port     = 6379
+        protocol    = "tcp"
+        cidr_blocks = [var.vpc_cidr_block]
+      }
+    ]
+    egress_rules = [
+      {
+        description = "Todo o trafego de saida"
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = [local.internet_cidr_block]
+      }
+    ]
+  }
 }

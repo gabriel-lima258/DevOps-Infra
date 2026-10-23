@@ -3,6 +3,8 @@
 Visão geral: [ARQUITETURA.md](ARQUITETURA.md) · Módulo EC2: [23-modulo-ec2.md](23-modulo-ec2.md)
 
 > **Atualização:** hoje o módulo está com `prevent_destroy = false`, e o `tofu destroy` voltou a funcionar (o dev foi destruído em 2026-10-23). O `ignore_changes = [ami]` continua.
+>
+> ⚠️ **De novo:** o módulo `elasticache` (doc 27) chegou com `prevent_destroy = true` fixo no cache. O `tofu destroy` do dev volta a falhar até usar a variável abaixo ([doc 27](27-modulo-elasticache.md#1--prevent_destroy--true-fixo-o-destroy-do-dev-volta-a-falhar)).
 
 ## O que é
 
@@ -199,6 +201,8 @@ lifecycle {
 | `aws_instance.main` | `ignore_changes = [ami]` | AMI nova não recria a instância | ✅ resolve o problema do doc 19 |
 | `aws_instance.main` | `prevent_destroy = true` | Bloqueia `destroy` e substituições | ⚠️ trava o `tofu destroy` do dev (custo) |
 | `aws_security_group.main` | `create_before_destroy = true` | Novo SG antes de apagar o velho | ⚠️ com `name` fixo, a substituição falharia (use `name_prefix`) |
+| `module.elasticache`: `aws_elasticache_serverless_cache.main` | `prevent_destroy = true` (fixo) | Bloqueia `destroy` do cache | ⚠️ trava de novo o `tofu destroy` do dev (doc 27) |
+| `module.elasticache`/`module.database`: `aws_security_group.main` | `create_before_destroy = true` | Igual ao do `ec2` | ⚠️ mesmo problema do `name` fixo |
 
 ## Pegadinhas
 

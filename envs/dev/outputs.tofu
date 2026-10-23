@@ -102,3 +102,28 @@ output "db_instance_id" {
 output "db_instance_arn" {
   value = module.database.db_instance_arn
 }
+
+output "elasticache_endpoint_address" {
+  description = "The primary endpoint address of the ElastiCache Valkey serverless cache"
+  value       = module.elasticache.endpoint_address
+}
+
+output "elasticache_endpoint_port" {
+  description = "The primary endpoint port of the ElastiCache Valkey serverless cache"
+  value       = module.elasticache.endpoint_port
+}
+
+output "elasticache_reader_endpoint_address" {
+  description = "The reader endpoint address of the ElastiCache Valkey serverless cache"
+  value       = module.elasticache.reader_endpoint_address
+}
+
+output "elasticache_arn" {
+  description = "The ARN of the ElastiCache Valkey serverless cache"
+  value       = module.elasticache.arn
+}
+
+output "security_group_elasticache_id" {
+  description = "The ID of the ElastiCache security group"
+  value       = module.elasticache.security_group_id
+}

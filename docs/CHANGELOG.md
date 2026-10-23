@@ -2,6 +2,18 @@
 
 Registro do que mudou no código e quais docs foram atualizados. Mais recente no topo.
 
+## 2026-10-23 (módulo ElastiCache: Valkey Serverless)
+
+**Código**
+- Novo `modules/elasticache/`: `aws_elasticache_serverless_cache` (engine `valkey`, `major_engine_version`, `cache_usage_limits` com storage 1–5 GB e 1000–5000 ECPU/s, subnets, snapshots, `prevent_destroy = true`) + SG (object + dynamic + `create_before_destroy`). Outputs: endpoint/reader (`endpoint[0]`), arn, status, id do SG.
+- `envs/{dev,prod}`: `elasticache.tofu` (`module "elasticache"`, nome `${env}-algadelivery-valkey`, subnets `subnet_pvt_ids["management"]`), 8 variáveis `elasticache_*` (versão `"8"`), `local.cache_security_group_config` (default montado no local quando a variável é `null`: 6379 da VPC), 5 outputs.
+- dev: `validate` ✅, `plan` = **41 to add** (nada aplicado). Valkey na AWS: 7.2, 8.0–8.2, 9.0, 9.1. Arquivos novos passam no `fmt`.
+- ⚠️ `prevent_destroy = true` fixo (o destroy do dev volta a falhar); mínimos de 1 GB + 1000 ECPU/s cobrados sempre (~US$ 67/mês por ambiente); default do módulo `"9"` x env `"8"`; sem `user_group_id` (sem senha); SG da VPC inteira + egress sem uso + `name` fixo; valores iguais em dev/prod.
+
+**Docs**
+- Novo `27-modulo-elasticache.md`: cache x banco, Valkey x Redis x Memcached, serverless x node-based, ECPU, passos 1–4 (SG, cache com tabela de argumentos, chamada no env + padrão default com `!= null`, outputs com `[0]`), plan real, como conectar com TLS pelo bastion, custos (Price List API), validação e 8 pontos de atenção com snippets testados.
+- `27-comandos.md` → **`28-comandos.md`** (+ comandos do ElastiCache). `ARQUITETURA.md` (Valkey no diagrama, tabela 41, custos, pendências, histórico), README, `10` (árvore), `24`, `25` (prevent_destroy de novo).
+
 ## 2026-10-23 (RDS: backup e janela de manutenção)
 
 **Código**
@@ -12,7 +24,7 @@ Registro do que mudou no código e quais docs foram atualizados. Mais recente no
 
 **Docs**
 - `26-modulo-rds.md`: novo "Passo 4b" (backup automático e point-in-time restore, retenção, `backup_window` e `maintenance_window` em UTC com conversão para Brasília, o que acontece na manutenção, interação com `apply_immediately`, linha do tempo da sobreposição, plan real, restore/consulta e 6 melhorias com `validation` testada). Validação e custos atualizados.
-- `25` (prevent_destroy = false), `ARQUITETURA.md` (situação, RDS com backup, pendências, histórico), README (dev destruído), `27-comandos.md` (backup/restore).
+- `25` (prevent_destroy = false), `ARQUITETURA.md` (situação, RDS com backup, pendências, histórico), README (dev destruído), `27-comandos.md`, hoje `28` (backup/restore).
 
 ## 2026-10-23 (módulo RDS)
 
@@ -24,7 +36,7 @@ Registro do que mudou no código e quais docs foram atualizados. Mais recente no
 
 **Docs**
 - Novo `26-modulo-rds.md`: RDS x EC2, as 4 peças e a ordem, passos 1–6 (subnet group, parameter group, SG, instância com tabela de "por quê", chamada no env, outputs + senha no Secrets Manager + túnel SSH e `psql`), plan real, validação, revisão em 7 pontos (snippets validados), custos e pegadinhas.
-- `ARQUITETURA.md`: RDS no Mermaid e no ASCII, tabela (39), fluxo até o banco, pendências e histórico. `15`, `22`, `24` (notas), `10` (árvore), `27-comandos.md` (ex-26, com comandos de RDS), README.
+- `ARQUITETURA.md`: RDS no Mermaid e no ASCII, tabela (39), fluxo até o banco, pendências e histórico. `15`, `22`, `24` (notas), `10` (árvore), `27-comandos.md` (ex-26, hoje `28`, com comandos de RDS), README.
 
 ## 2026-10-23 (lifecycle no módulo EC2)
 

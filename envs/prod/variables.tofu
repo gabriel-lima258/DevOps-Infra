@@ -227,3 +227,69 @@ variable "db_maintenance_window" {
   type = string
   default = "Mon:03:00-Mon:04:00"
 }
+
+# ElastiCache Serverless
+variable "elasticache_major_engine_version" {
+  description = "The major version of the Valkey engine (e.g. 8)"
+  type        = string
+  default     = "8"
+}
+
+variable "elasticache_data_storage_maximum" {
+  description = "Maximum data storage limit in GB"
+  type        = number
+  default     = 5
+}
+
+variable "elasticache_data_storage_minimum" {
+  description = "Minimum data storage limit in GB"
+  type        = number
+  default     = 1
+}
+
+variable "elasticache_ecpu_per_second_maximum" {
+  description = "Maximum number of ECPUs per second"
+  type        = number
+  default     = 5000
+}
+
+variable "elasticache_ecpu_per_second_minimum" {
+  description = "Minimum number of ECPUs per second"
+  type        = number
+  default     = 1000
+}
+
+variable "elasticache_snapshot_retention_limit" {
+  description = "Number of days to retain automatic snapshots (0 = disabled)"
+  type        = number
+  default     = 0
+}
+
+variable "elasticache_daily_snapshot_time" {
+  description = "Time to take daily snapshots in UTC (e.g. 05:00). Null disables scheduled snapshots."
+  type        = string
+  default     = null
+}
+
+variable "elasticache_security_group_config" {
+  description = "Security group configuration for ElastiCache. When null, a default is generated from vpc_cidr_block."
+  type = object({
+    name        = string
+    description = string
+    ingress_rules = list(object({
+      description = string
+      from_port   = number
+      to_port     = number
+      protocol    = string
+      cidr_blocks = list(string)
+    }))
+    egress_rules = list(object({
+      description = string
+      from_port   = number
+      to_port     = number
+      protocol    = string
+      cidr_blocks = list(string)
+    }))
+  })
+  default = null
+}
