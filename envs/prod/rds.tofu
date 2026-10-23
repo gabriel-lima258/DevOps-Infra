@@ -16,6 +16,10 @@ module "database" {
   db_subnet_group_name  = var.db_subnet_group_name
   security_group_config = local.db_security_group_config
 
+  db_backup_retention_period = var.db_backup_retention_period
+  db_backup_window           = var.db_backup_window
+  db_maintenance_window      = var.db_maintenance_window
+
   db_parameter_group_name    = var.db_parameter_group_name
   db_parameter_group_options = var.db_parameter_group_options
 

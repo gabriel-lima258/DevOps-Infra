@@ -64,10 +64,10 @@ devops/
 
 | Ambiente | State | VPC | Status |
 |----------|-------|-----|--------|
-| `envs/dev` | `algadelivery/development/remote.tfstate` | `172.25.0.0/16` | ✅ aplicado: 35 recursos (`module.vpc` + `module.bastion`), plan sem mudanças |
+| `envs/dev` | `algadelivery/development/remote.tfstate` | `172.25.0.0/16` | 💤 destruído (state vazio, custo zero). O código tem 39 recursos: `tofu apply` recria tudo |
 | `envs/prod` | `algadelivery/production/remote.tfstate` | `172.26.0.0/16` | ⏸️ rode `tofu init -reconfigure` antes do primeiro plan |
 
-- **Em cada ambiente:** `module.vpc` (VPC, 3 públicas + 9 privadas em grupos management/cluster/database, IGW, NAT regional 💲, route tables) e `module.bastion` (EC2 Ubuntu `t3.micro`, Elastic IP, SG via `dynamic`, key pair + `.pem`). `module.database` (RDS PostgreSQL 18 `db.t4g.micro` nas subnets database, senha no Secrets Manager; ⏳ no dev o `plan` mostra 4 to add). `module.rancher` está comentado.
+- **Em cada ambiente:** `module.vpc` (VPC, 3 públicas + 9 privadas em grupos management/cluster/database, IGW, NAT regional 💲, route tables) e `module.bastion` (EC2 Ubuntu `t3.micro`, Elastic IP, SG via `dynamic`, key pair + `.pem`). `module.database` (RDS PostgreSQL 18 `db.t4g.micro` nas subnets database, senha no Secrets Manager; backup 10 dias + janela de manutenção). `module.rancher` está comentado.
 - Pendências e riscos: [ARQUITETURA.md](ARQUITETURA.md#pendências).
 
 ## Rodando rápido

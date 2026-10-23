@@ -147,6 +147,12 @@ psql -h localhost -p 5432 -U postgres -d delivery                       # em out
 aws rds describe-db-instances --db-instance-identifier development-algadelivery-db \
   --query 'DBInstances[0].DBInstanceStatus'                             # status (creating, available…)
 aws rds reboot-db-instance --db-instance-identifier development-algadelivery-db   # aplica pending-reboot
+aws rds describe-db-snapshots --db-instance-identifier development-algadelivery-db \
+  --snapshot-type automated                                             # backups automáticos
+aws rds restore-db-instance-to-point-in-time \
+  --source-db-instance-identifier development-algadelivery-db \
+  --target-db-instance-identifier development-algadelivery-db-restore \
+  --restore-time 2026-10-23T12:00:00Z                                   # restore cria OUTRA instância
 ```
 
 ## Outputs

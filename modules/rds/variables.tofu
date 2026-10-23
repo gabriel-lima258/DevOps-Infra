@@ -95,3 +95,21 @@ variable "security_group_config" {
 variable "vpc_id" {
   type = string
 }
+
+variable "db_backup_retention_period" {
+  description = "The number of days to retain backup copies"
+  type = string
+  default = "7"
+}
+
+variable "db_backup_window" {
+  description = "The time window for database backups"
+  type = string
+  default = "03:00-04:00"
+}
+
+variable "db_maintenance_window" {
+  description = "The maintenance window for the DB instance"
+  type = string
+  default = "Mon:02:00-Mon:04:00"
+}

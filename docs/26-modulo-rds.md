@@ -168,7 +168,145 @@ Padrões que ficaram implícitos (não aparecem no código):
 | `publicly_accessible` | `false` | ✅ O banco não ganha IP público |
 | `storage_encrypted` | `false` | ⚠️ Disco **sem** criptografia |
 | `deletion_protection` | `false` | ⚠️ Pode ser apagado sem trava |
-| `backup_retention_period` | definido pela AWS | Backups automáticos diários |
+
+### Passo 4b: backup automático e janela de manutenção
+
+Configurado depois, em `modules/rds/main.tofu`:
+
+```hcl
+resource "aws_db_instance" "main" {
+  # ...
+  backup_retention_period = var.db_backup_retention_period   # "10"
+  backup_window           = var.db_backup_window             # "02:00-03:00"
+  maintenance_window      = var.db_maintenance_window        # "Mon:03:00-Mon:04:00"
+  # ...
+}
+```
+
+Os valores vêm do ambiente (`envs/<env>/variables.tofu`) e passam pela chamada (`envs/<env>/rds.tofu`), no mesmo caminho dos outros inputs:
+
+```
+envs/dev/variables.tofu  ──►  envs/dev/rds.tofu (module "database")  ──►  modules/rds/variables.tofu  ──►  aws_db_instance
+   default = "10"                db_backup_retention_period = var...        variable "db_backup_..."         backup_retention_period
+```
+
+#### O que é o backup automático
+
+Com `backup_retention_period` maior que 0, a AWS faz **sozinha**:
+
+1. **Um snapshot por dia**, dentro da `backup_window`.
+2. **Cópia contínua dos logs de transação** (a cada ~5 minutos).
+
+Juntos, eles permitem o **point-in-time restore**: restaurar o banco como ele estava em **qualquer segundo** dos últimos N dias (até ~5 minutos atrás).
+
+| `backup_retention_period` | Efeito |
+|---------------------------|--------|
+| `0` | Backup automático **desligado** (e sem point-in-time restore, nem réplicas de leitura) |
+| `1` a `35` | Guarda os backups por N dias |
+| **`10`** (projeto) | Dá para voltar a qualquer momento dos últimos 10 dias |
+
+💲 O armazenamento de backup é **grátis até o tamanho do banco** (20 GB aqui). Acima disso, é cobrado por GB.
+
+#### `backup_window`: quando o snapshot diário roda
+
+- Formato `hh24:mi-hh24:mi`, **em UTC**, com no mínimo 30 minutos.
+- `02:00-03:00` UTC = **23:00–00:00 no horário de Brasília** (UTC−3).
+- Durante o snapshot, numa instância **Single-AZ** (`multi_az = false`, o caso do projeto), o I/O pode ficar lento por alguns instantes. Por isso se escolhe a madrugada do público do sistema.
+
+#### `maintenance_window`: quando a AWS pode mexer no banco
+
+- Formato `ddd:hh24:mi-ddd:hh24:mi`, **em UTC**, com no mínimo 30 minutos.
+- `Mon:03:00-Mon:04:00` UTC = **domingo 00:00–01:00 em Brasília**.
+- No `plan`, o provider mostra o dia em minúsculas (`"mon:03:00-mon:04:00"`). É só normalização, não é um diff.
+
+O que acontece nessa janela:
+
+- patches do sistema operacional e do PostgreSQL;
+- atualização de **versão minor** automática (`auto_minor_version_upgrade`, ligado por padrão): por exemplo, `18.3` → `18.4`;
+- mudanças que você deixou **pendentes** (feitas sem `apply_immediately`).
+
+> **Interação com `apply_immediately = true` (passo 4):** as mudanças feitas pelo `tofu apply` **não** esperam a janela; são aplicadas na hora, às vezes com reinício. A janela continua valendo para os patches e upgrades **da AWS**.
+
+#### Regra: as duas janelas não podem se sobrepor
+
+A AWS rejeita uma configuração em que o backup cai dentro da manutenção:
+
+```
+                          00:00   01:00   02:00   03:00   04:00   (UTC, segunda)
+Ambientes (dev e prod):
+  backup_window                           [==02-03==]
+  maintenance_window (Mon)                          [==03-04==]   ✅ encostam, mas não se sobrepõem
+
+Defaults do MÓDULO (modules/rds/variables.tofu):
+  backup_window                                   [==03-04==]
+  maintenance_window (Mon)                [=====02-04=====]       ❌ sobreposição
+```
+
+Os **defaults do módulo** (`"03:00-04:00"` e `"Mon:02:00-Mon:04:00"`) se sobrepõem. Hoje isso não quebra, porque os dois ambientes passam valores próprios. Mas quem usar o módulo **sem** passar esses inputs vai receber erro da AWS no apply.
+
+#### No `plan`
+
+```
+  # module.database.aws_db_instance.main will be created
+      + backup_retention_period = 10
+      + backup_window           = "02:00-03:00"
+      + maintenance_window      = "mon:03:00-mon:04:00"
+```
+
+Repare: a variável é `"10"` (texto), e o plan mostra `10` (número). O OpenTofu converte sozinho (ver as melhorias abaixo).
+
+#### Restaurar e consultar backups
+
+```bash
+# backups automáticos existentes
+aws rds describe-db-snapshots --db-instance-identifier development-algadelivery-db --snapshot-type automated
+
+# point-in-time restore: cria uma INSTÂNCIA NOVA (a original continua lá)
+aws rds restore-db-instance-to-point-in-time \
+  --source-db-instance-identifier development-algadelivery-db \
+  --target-db-instance-identifier development-algadelivery-db-restore \
+  --restore-time 2026-10-23T12:00:00Z
+```
+
+O restore **sempre cria outra instância**, que fica fora do state do OpenTofu. Depois de conferir os dados, você decide: apontar a aplicação para ela (e importar no state, doc 08) ou só copiar os dados de volta.
+
+#### Melhorias para o backup e a manutenção
+
+1. **`type = number` na retenção.** Hoje é `type = string` com `"10"`. Funciona porque o OpenTofu converte, mas o tipo certo documenta melhor e permite validar o intervalo.
+2. **Corrigir os defaults do módulo** para não se sobreporem (ex.: backup `02:00-03:00`, manutenção `Mon:03:00-Mon:04:00`).
+3. **Validar o formato** (testado: aceita os valores do projeto e recusa `40`, `2:00-3:00` e `Segunda:03:00` com `Invalid value for variable`):
+   ```hcl
+   variable "db_backup_retention_period" {
+     type    = number
+     default = 7
+     validation {
+       condition     = var.db_backup_retention_period >= 0 && var.db_backup_retention_period <= 35
+       error_message = "A retencao de backup deve ficar entre 0 e 35 dias."
+     }
+   }
+
+   variable "db_backup_window" {
+     type    = string
+     default = "02:00-03:00"
+     validation {
+       condition     = can(regex("^([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]$", var.db_backup_window))
+       error_message = "Use o formato hh24:mi-hh24:mi (UTC), ex.: 02:00-03:00."
+     }
+   }
+
+   variable "db_maintenance_window" {
+     type    = string
+     default = "Mon:03:00-Mon:04:00"
+     validation {
+       condition     = can(regex("^(?i)(mon|tue|wed|thu|fri|sat|sun):([01][0-9]|2[0-3]):[0-5][0-9]-(mon|tue|wed|thu|fri|sat|sun):([01][0-9]|2[0-3]):[0-5][0-9]$", var.db_maintenance_window))
+       error_message = "Use o formato ddd:hh24:mi-ddd:hh24:mi (UTC), ex.: Mon:03:00-Mon:04:00."
+     }
+   }
+   ```
+   A sobreposição entre as duas janelas não é checada por essas regex. Ela continua sendo verificada pela AWS no apply.
+4. **Valores diferentes por ambiente.** Hoje dev e prod usam os mesmos `10` dias e as mesmas janelas. É comum dev com 1–3 dias (mais barato) e prod com 7–35, com as janelas de prod no horário de menor uso real.
+5. **`copy_tags_to_snapshot = true`**: os snapshots herdam as tags (`Environment`, `ManagedBy`), o que ajuda a achar e a ratear custos.
+6. **Atenção ao `destroy`:** com `skip_final_snapshot = true`, o `destroy` apaga o banco **sem** snapshot final, e os backups automáticos também vão embora junto (padrão `delete_automated_backups = true`). Os "10 dias de backup" **não sobrevivem** a um `tofu destroy`. Em prod: `skip_final_snapshot = false` (com `final_snapshot_identifier`) e/ou `delete_automated_backups = false`.
 
 ### Passo 5: a chamada no ambiente (`envs/dev/rds.tofu`)
 
@@ -277,9 +415,9 @@ Plan: 4 to add, 0 to change, 0 to destroy.
 
 | Ambiente | Resultado |
 |----------|-----------|
-| **dev** | `tofu validate` ✅ · `plan` = 4 to add ✅ |
+| **dev** | `tofu validate` ✅. Na primeira análise o `plan` deu 4 to add. **Depois o dev foi destruído** (state vazio; na AWS não sobrou VPC, NAT nem RDS): hoje o `plan` mostra **39 to add** (rede + bastion + banco) |
 | **prod** | ❌ `Error: Module not installed` (`module "database"`). Rode `tofu init -reconfigure` (doc 24) |
-| `tofu fmt -check -recursive` | ❌ `modules/ec2/main.tofu` e `envs/prod/local.tofu` |
+| `tofu fmt -check -recursive` | ❌ `modules/ec2/main.tofu`, `modules/rds/variables.tofu`, `envs/prod/local.tofu`, `envs/prod/variables.tofu` |
 
 ## 🔍 Revisão: o que ajustar
 
@@ -352,9 +490,9 @@ Mudar `max_connections` depois: o `apply` atualiza o parameter group, mas o valo
 | `db.t4g.micro` | ~US$ 0,016/h (~US$ 12/mês) |
 | 20 GB de armazenamento | ~US$ 2–2,50/mês |
 | Segredo no Secrets Manager | ~US$ 0,40/mês |
-| Backups até o tamanho do banco | sem custo extra |
+| Backups (10 dias) até o tamanho do banco (20 GB) | sem custo extra; acima disso, por GB |
 
-Somado ao NAT, ao bastion e ao Elastic IP, o dev já passa de US$ 50/mês ligado 24h. **Lembrete:** o `prevent_destroy` do módulo ec2 ainda bloqueia o `tofu destroy` (doc 25).
+Somado ao NAT, ao bastion e ao Elastic IP, o dev já passa de US$ 50/mês ligado 24h. O `prevent_destroy` do módulo ec2 hoje está `false`, então o `tofu destroy` funciona (doc 25).
 
 ## Pegadinhas
 

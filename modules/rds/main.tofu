@@ -46,6 +46,10 @@ resource "aws_db_instance" "main" {
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.main.id]
 
+  backup_retention_period = var.db_backup_retention_period
+  backup_window           = var.db_backup_window
+  maintenance_window      = var.db_maintenance_window
+
   multi_az = false
 
   skip_final_snapshot = var.db_skip_final_snapshot

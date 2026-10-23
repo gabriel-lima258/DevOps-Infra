@@ -2,6 +2,18 @@
 
 Registro do que mudou no código e quais docs foram atualizados. Mais recente no topo.
 
+## 2026-10-23 (RDS: backup e janela de manutenção)
+
+**Código**
+- `modules/rds/main.tofu`: `backup_retention_period`, `backup_window` e `maintenance_window` via variáveis. `modules/rds/variables.tofu`: 3 inputs `string` com defaults `"7"`, `"03:00-04:00"`, `"Mon:02:00-Mon:04:00"` (⚠️ as janelas se sobrepõem).
+- `envs/{dev,prod}`: as 3 variáveis (`"10"`, `"02:00-03:00"`, `"Mon:03:00-Mon:04:00"`, iguais nos dois) repassadas no `rds.tofu`.
+- dev: `validate` ✅; `plan` mostra `backup_retention_period = 10`, `backup_window = "02:00-03:00"`, `maintenance_window = "mon:03:00-mon:04:00"`. O dev foi **destruído** (state vazio, AWS sem recursos do projeto): `plan` = 39 to add. `modules/ec2`: `prevent_destroy = false`.
+- `fmt -check` falha em `modules/ec2/main.tofu`, `modules/rds/variables.tofu`, `envs/prod/local.tofu` e `envs/prod/variables.tofu`.
+
+**Docs**
+- `26-modulo-rds.md`: novo "Passo 4b" (backup automático e point-in-time restore, retenção, `backup_window` e `maintenance_window` em UTC com conversão para Brasília, o que acontece na manutenção, interação com `apply_immediately`, linha do tempo da sobreposição, plan real, restore/consulta e 6 melhorias com `validation` testada). Validação e custos atualizados.
+- `25` (prevent_destroy = false), `ARQUITETURA.md` (situação, RDS com backup, pendências, histórico), README (dev destruído), `27-comandos.md` (backup/restore).
+
 ## 2026-10-23 (módulo RDS)
 
 **Código**

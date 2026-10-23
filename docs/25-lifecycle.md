@@ -2,6 +2,8 @@
 
 Visão geral: [ARQUITETURA.md](ARQUITETURA.md) · Módulo EC2: [23-modulo-ec2.md](23-modulo-ec2.md)
 
+> **Atualização:** hoje o módulo está com `prevent_destroy = false`, e o `tofu destroy` voltou a funcionar (o dev foi destruído em 2026-10-23). O `ignore_changes = [ami]` continua.
+
 ## O que é
 
 Por padrão, o OpenTofu decide sozinho **quando** e **como** mexer num recurso: se um argumento imutável muda, ele **destrói e depois cria** (`-/+`); se você roda `destroy`, ele apaga; se algo mudou fora do código, ele "corrige".
