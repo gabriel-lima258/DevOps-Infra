@@ -1,5 +1,7 @@
 # 21. Modules: a rede virou um módulo
 
+> **Atualização (ambientes):** a migração com blocos `moved` descrita aqui **não foi necessária na prática**. Com a reorganização em `envs/` (doc 24), o ambiente dev foi criado do zero num state novo (`algadelivery/development/remote.tfstate`), e a AWS foi conferida sem recursos órfãos do código antigo. O conteúdo continua válido como conceito, para quando a infraestrutura não puder ser recriada.
+
 Visão geral de como tudo se conecta: [ARQUITETURA.md](ARQUITETURA.md).
 
 > **Atualização (2026-10-22):** os inputs de subnets viraram `subnet_pub_config` e `subnet_pvt_config` **agrupados** (`map(map(object))`), e as privadas viraram um único `aws_subnet.private`. Por isso o `moved.tofu` desta página **ficou desatualizado**: as chaves mudaram. Use o de [22-modulo-vpc-grupos-de-subnets.md](22-modulo-vpc-grupos-de-subnets.md#migração-do-state-moved-por-chave).

@@ -1,8 +1,12 @@
 # 23. Módulo EC2: uma "receita de servidor" reutilizável
 
+> **Atualização (ambientes):** a migração com blocos `moved` descrita aqui **não foi necessária na prática**. Com a reorganização em `envs/` (doc 24), o ambiente dev foi criado do zero num state novo (`algadelivery/development/remote.tfstate`), e a AWS foi conferida sem recursos órfãos do código antigo. O conteúdo continua válido como conceito, para quando a infraestrutura não puder ser recriada.
+
 Visão geral: [ARQUITETURA.md](ARQUITETURA.md) · Módulos (inputs/outputs): [21-modules.md](21-modules.md)
 
-> 🔴 **Antes do próximo `apply`, leia [Migração do state](#migração-do-state).** Sem blocos `moved`, o `plan` atual quer **destruir 30 e criar 41** recursos.
+> **Atualização (ambientes):** em `envs/dev` e `envs/prod`, o `module "rancher"` está **comentado**, e o `keypair_name` agora leva o prefixo do ambiente no dev. Ver [24-multiplos-ambientes.md](24-multiplos-ambientes.md).
+
+> 🔴 (histórico) **Antes do próximo `apply`, leia [Migração do state](#migração-do-state).** Sem blocos `moved`, o `plan` atual quer **destruir 30 e criar 41** recursos.
 
 ## Por que um módulo de EC2
 

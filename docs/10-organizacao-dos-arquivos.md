@@ -4,27 +4,27 @@ Com a VPC, o projeto deixou de ter um `main.tofu` único. Agora cada assunto fic
 
 ## A estrutura atual
 
+> **Atualização (ambientes):** o root module saiu da raiz e virou **uma pasta por ambiente** (`envs/dev`, `envs/prod`). Os arquivos abaixo existem **em cada** pasta de env. Ver [24-multiplos-ambientes.md](24-multiplos-ambientes.md).
+
 ```
 devops/
-├── providers.tofu    # bloco terraform (versões + backend) e provider "aws"
-├── data.tofu         # data sources: data.http.my_public_ip, data.aws_ami.ubuntu
-├── ec2.tofu          # CHAMA o módulo ec2 duas vezes: module "bastion" e module "rancher"
-├── local.tofu        # locals: context_name, my_public_ip, common_tags, configs de SG (bastion e rancher)
-├── vpc.tofu          # CHAMA o módulo de rede: module "vpc" { source = "./modules/vpc" }
-├── variables.tofu    # aws_region, environment, vpc_cidr_block, subnets, NAT, EC2, regras do bastion
-├── outputs.tofu      # repassa outputs de module.vpc e module.bastion
-├── .terraform.lock.hcl
-└── modules/
-    └── vpc/          # MÓDULO: VPC, 9 subnets, IGW, NAT, route tables (doc 21)
-        ├── main.tofu
-        ├── variables.tofu   # inputs
-        ├── outputs.tofu     # outputs
-        └── locals.tofu
-    └── ec2/          # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (doc 23)
-        ├── main.tofu
-        ├── security_group.tofu
-        ├── variables.tofu
-        └── outputs.tofu
+├── .env                    # credenciais (compartilhadas)
+├── modules/
+│   ├── vpc/                # MÓDULO: VPC, 12 subnets em grupos, IGW, NAT, route tables (docs 21-22)
+│   │   ├── main.tofu, variables.tofu, outputs.tofu, locals.tofu
+│   └── ec2/                # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (doc 23)
+│       ├── main.tofu, security_group.tofu, variables.tofu, outputs.tofu
+└── envs/
+    ├── dev/                # root module do ambiente development
+    │   ├── providers.tofu  # bloco terraform (versões + backend) e provider "aws"
+    │   ├── data.tofu       # data sources: seu IP, AMI Ubuntu
+    │   ├── vpc.tofu        # CHAMA modules/vpc (source = "../../modules/vpc")
+    │   ├── ec2.tofu        # CHAMA modules/ec2 (bastion; rancher comentado)
+    │   ├── local.tofu      # context_name, my_public_ip, common_tags, configs de SG
+    │   ├── variables.tofu  # valores do ambiente (environment, CIDRs, subnets...)
+    │   ├── outputs.tofu    # repassa outputs dos módulos
+    │   └── .terraform.lock.hcl
+    └── prod/               # mesmos arquivos, valores de production
 ```
 
 | Arquivo | O que vai nele |

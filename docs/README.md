@@ -33,7 +33,8 @@ Como tudo se conecta hoje: VPC, subnets, gateways e o que ainda falta. Atualizad
 | 21 | [21-modules.md](21-modules.md) | Modules: inputs, outputs, escopo isolado, refatorar sem destruir (`moved`) |
 | 22 | [22-modulo-vpc-grupos-de-subnets.md](22-modulo-vpc-grupos-de-subnets.md) | Módulo VPC com grupos de subnets: `map(map(object))`, achatamento com `merge(...)`, outputs agrupados, `moved` por chave |
 | 23 | [23-modulo-ec2.md](23-modulo-ec2.md) | Módulo EC2: um módulo chamado 2× (bastion/rancher), SG como `object`, `count` no EIP, nomes únicos, migração |
-| 24 | [24-comandos.md](24-comandos.md) | Cheat sheet de comandos |
+| 24 | [24-multiplos-ambientes.md](24-multiplos-ambientes.md) | Múltiplos ambientes: `envs/dev` e `envs/prod`, state por ambiente, como rodar, riscos |
+| 25 | [25-comandos.md](25-comandos.md) | Cheat sheet de comandos |
 | 📘 | [types_expression.md](types_expression.md) | Material de apoio (aula 04.04): tipos de coleção e for expressions, com exercícios |
 | — | [CHANGELOG.md](CHANGELOG.md) | Diário de estudo: o que mudou e quando |
 
@@ -43,45 +44,37 @@ Como tudo se conecta hoje: VPC, subnets, gateways e o que ainda falta. Atualizad
 
 ```
 devops/
-├── providers.tofu         # bloco terraform (providers aws, http, tls, local + backend S3) + provider AWS
-├── data.tofu              # data sources: seu IP (http) e AMI Ubuntu (aws_ami)
-├── ec2.tofu               # chama o módulo ec2: module "bastion" e module "rancher"
-├── local.tofu             # locals: context_name, ngw_regional_mode, internet_cidr_block, my_public_ip, common_tags
-├── vpc.tofu               # chama o módulo de rede (module "vpc")
-├── variables.tofu         # região, ambiente, VPC, subnets agrupadas (map(map(object))), NAT, EC2, regras do bastion
-├── outputs.tofu           # repassa outputs de module.vpc e module.bastion
-├── modules/vpc/           # MÓDULO: VPC, 12 subnets em grupos, IGW, NAT regional, route tables
-├── modules/ec2/           # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (count)
-├── .terraform.lock.hcl    # versões travadas dos providers (vai pro git)
-├── .terraform/            # providers + config do backend, gerados pelo init (fora do git)
 ├── .env                   # credenciais AWS (fora do git)
+├── .gitignore             # .env, .terraform/, *.tfstate, *.pem...
+├── modules/
+│   ├── vpc/               # MÓDULO: VPC, 12 subnets em grupos, IGW, NAT regional, route tables
+│   └── ec2/               # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (count)
+├── envs/
+│   ├── dev/               # ambiente development (root module): providers, data, vpc, ec2, local, variables, outputs
+│   └── prod/              # ambiente production: mesmos arquivos, valores de prod
 └── docs/                  # esta documentação (+ fluxo-opentofu.png)
 ```
 
 - **OpenTofu:** 1.13.1
-- **Providers:** `hashicorp/aws` 6.69.1 (`~> 6.0`), `hashicorp/http` (`~> 3.0`), `hashicorp/tls` (`~> 4.0`) e `hashicorp/local` (`~> 2.0`). init feito ✅
-- **Região:** `us-east-1` (`var.aws_region`)
-- **State:** remoto, `s3://algadelivery-tfstate-devops/development/networking/remote.tfstate`
-- **Ambiente atual:** `development` (padrão da variável `environment`)
-- **Recursos:**
-  - **No módulo `vpc`** (`module.vpc.*`, nomes lógicos `main`):
-  - `aws_vpc.main` (`172.25.0.0/16`, tag `Name = algadelivery-vpc`)
-  - `aws_subnet.public["pub_a|pub_b|pub_c"]` (grupo `public`, `172.25.1-3.0/24`, nomes `algadelivery-pub-public-{a,b,c}`)
-  - `aws_subnet.private[...]`: grupos `management` (`172.25.4-6`), `cluster` (`172.25.7-9`) e `database` (`172.25.10-12`), nomes `algadelivery-pvt-<grupo>-{a,b,c}`
-  - `aws_internet_gateway.algadelivery` (`algadelivery-igw`)
-  - `aws_nat_gateway.algadelivery` (**regional**, 💲 pago por hora)
-  - `aws_route_table.public` (→ IGW) e `aws_route_table.private` (→ NAT) + 12 associations
-  - **No módulo `ec2`**, chamado 2× (`module.bastion` e `module.rancher`), cada um com: EC2 Ubuntu 22.04 `t3.micro` (pub-a), Elastic IP, SG próprio (`bastion-sg` / `rancher-sg`, regras via `dynamic`), key pair e `.pem` próprios (`algadelivery-bastion.pem` / `algadelivery-rancher.pem`, no `.gitignore` ✅)
-- **Outputs (raiz):** os de rede repassados de `module.vpc` (`vpc_id`, `subnet_public_ids`, `igw_id`, `ngw_id`, route tables…) + `security_group_bastion_id`, `bastion_id`, `bastion_arn`, `bastion_public_ip`, `keypair_arn`
-- **No código:** 41 recursos. 🔴 Adicione os `moved` da VPC (doc 22) e do bastion (doc 23) antes do apply. ⚠️ NAT + 2 EC2 + 2 Elastic IPs cobram por hora; veja as pendências em [ARQUITETURA.md](ARQUITETURA.md#pendências).
+- **Providers:** `hashicorp/aws` 6.69.1 (`~> 6.0`), `hashicorp/http` (`~> 3.0`), `hashicorp/tls` (`~> 4.0`), `hashicorp/local` (`~> 2.0`). Um `.terraform.lock.hcl` por ambiente
+- **Região:** `us-east-1`
+
+| Ambiente | State | VPC | Status |
+|----------|-------|-----|--------|
+| `envs/dev` | `algadelivery/development/remote.tfstate` | `172.25.0.0/16` | ✅ aplicado: 35 recursos (`module.vpc` + `module.bastion`), plan sem mudanças |
+| `envs/prod` | `algadelivery/production/remote.tfstate` | `172.26.0.0/16` | ⏸️ rode `tofu init -reconfigure` antes do primeiro plan |
+
+- **Em cada ambiente:** `module.vpc` (VPC, 3 públicas + 9 privadas em grupos management/cluster/database, IGW, NAT regional 💲, route tables) e `module.bastion` (EC2 Ubuntu `t3.micro`, Elastic IP, SG via `dynamic`, key pair + `.pem`). `module.rancher` está comentado.
+- Pendências e riscos: [ARQUITETURA.md](ARQUITETURA.md#pendências).
 
 ## Rodando rápido
 
 ![Fluxo de trabalho OpenTofu](fluxo-opentofu.png)
 
 ```bash
-source .env       # carrega as credenciais AWS no terminal
-tofu init         # baixa os providers e configura o backend S3
+cd envs/dev       # o AMBIENTE é a pasta (envs/dev ou envs/prod)
+source ../../.env # carrega as credenciais AWS no terminal
+tofu init         # baixa os providers e configura o backend S3 (prod, 1ª vez: tofu init -reconfigure)
 tofu plan         # mostra o que vai mudar
 tofu apply        # aplica (pede confirmação "yes")
 tofu show         # mostra o que está no state

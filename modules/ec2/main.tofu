@@ -36,4 +36,9 @@ resource "aws_instance" "main" {
   )
 
   depends_on = [aws_key_pair.main]
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes = [ami]
+  }
 }

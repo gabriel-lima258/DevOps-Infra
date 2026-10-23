@@ -2,6 +2,8 @@
 
 Até o doc 08, o state era um arquivo na pasta do projeto. Agora ele fica num **bucket S3**, com um arquivo separado para cada ambiente (development, homolog, production…).
 
+> **Atualização (ambientes):** hoje cada ambiente é uma pasta (`envs/dev`, `envs/prod`) e a key é `algadelivery/${var.environment}/remote.tfstate`, ou seja, `algadelivery/development/remote.tfstate` e `algadelivery/production/remote.tfstate`. Ver [24-multiplos-ambientes.md](24-multiplos-ambientes.md), inclusive o risco de a key depender de variável.
+
 ## Por que tirar o state da máquina
 
 | Problema do state local | Como o backend remoto resolve |

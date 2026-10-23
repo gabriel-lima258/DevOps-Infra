@@ -28,4 +28,8 @@ resource "aws_security_group" "main" {
   tags = merge(var.common_tags, {
     Name = var.security_group_config.name
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }

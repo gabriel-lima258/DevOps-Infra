@@ -1,5 +1,7 @@
 # 22. Módulo VPC com grupos de subnets (coleções e expressions na prática)
 
+> **Atualização (ambientes):** a migração com blocos `moved` descrita aqui **não foi necessária na prática**. Com a reorganização em `envs/` (doc 24), o ambiente dev foi criado do zero num state novo (`algadelivery/development/remote.tfstate`), e a AWS foi conferida sem recursos órfãos do código antigo. O conteúdo continua válido como conceito, para quando a infraestrutura não puder ser recriada.
+
 Visão geral: [ARQUITETURA.md](ARQUITETURA.md) · Teoria dos tipos e for expressions: [types_expression.md](types_expression.md)
 
 > 🔴 **Antes do próximo `apply`, leia [Migração do state](#migração-do-state-moved-por-chave).** Sem blocos `moved`, o `plan` atual quer **destruir 27 e criar 32** recursos.

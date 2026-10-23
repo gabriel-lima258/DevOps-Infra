@@ -2,6 +2,20 @@
 
 Registro do que mudou no código e quais docs foram atualizados. Mais recente no topo.
 
+## 2026-10-22 (múltiplos ambientes: envs/dev e envs/prod)
+
+**Código**
+- Os `.tofu` da raiz foram movidos para `envs/dev/` e `envs/prod/` (um root module por ambiente), compartilhando `modules/vpc` e `modules/ec2` (`source = "../../modules/..."`).
+- Backend: `key = "algadelivery/${var.environment}/remote.tfstate"`. Dev em `algadelivery/development/...` e prod em `algadelivery/production/...`. VPCs `172.25.0.0/16` (dev) e `172.26.0.0/16` (prod).
+- dev: aplicado do zero; 35 recursos; `plan` → No changes. prod: `validate` ok, mas o `.terraform/` copiado aponta para o backend antigo → `tofu init -reconfigure`.
+- AWS conferida (só leitura): 1 VPC (dev), 1 NAT, 1 EC2, 2 EIPs (bastion + NAT regional); sem órfãos. O state antigo `development/networking/...` não existe mais.
+- ⚠️ Envs divergentes (nome do bastion, key pair, `[0]` x `["0"]`, rancher comentado diferente; bug de `instance_type` no rancher do dev). A key do backend depende de variável. Ainda sem commit.
+
+**Docs**
+- Novo `24-multiplos-ambientes.md`: por que separar, estrutura, o que é compartilhado x por ambiente, state por env, como rodar, `init -reconfigure`, dev x prod, situação real, riscos (key por variável com snippets validados, duplicação e alternativas, nomes, bug do rancher, custo, commit) e pegadinhas.
+- `09`, `10` (árvore com `envs/`), `21`/`22`/`23` (o `moved` não foi necessário na prática), `25-comandos.md` (ex-24, com envs), README (estrutura, estado por ambiente, como rodar).
+- `ARQUITETURA.md`: seção Ambientes, diagrama do dev (sem o rancher), 35 recursos, pendências refeitas e histórico.
+
 ## 2026-10-22 (módulo EC2: bastion e rancher)
 
 **Código**

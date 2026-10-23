@@ -1,10 +1,10 @@
-# 24. Cheat sheet de comandos
+# 25. Cheat sheet de comandos
 
 > Endereços com `for_each` levam aspas e colchetes: use aspas simples no terminal, ex.: `tofu state show 'aws_subnet.public["public_a"]'`.
 
 Visão geral do ciclo em [04-fluxo-de-trabalho.md](04-fluxo-de-trabalho.md).
 
-Antes de tudo, no terminal: `source .env`
+Antes de tudo, entre na pasta do ambiente e carregue as credenciais: `cd envs/dev && source ../../.env`
 
 ## Básicos
 
@@ -108,6 +108,15 @@ tofu state mv 'aws_vpc.algadelivery' 'module.vpc.aws_vpc.main'   # alternativa a
 echo 'keys(var.subnet_pvt_config)' | tofu console               # grupos de subnets privadas
 echo 'type(["texto", 42, true])' | tofu console                 # ver o tipo de um valor
 tofu output -json | python3 -m json.tool                        # outputs agrupados por grupo
+```
+
+## Ambientes (doc 24)
+
+```bash
+cd envs/dev  && source ../../.env && tofu plan     # o ambiente é a PASTA
+cd envs/prod && tofu init -reconfigure             # 1ª vez em prod (.terraform copiado)
+pwd                                                 # confira o ambiente antes do apply
+diff -r envs/dev envs/prod -x .terraform -x '*.pem' # ver o que diverge entre os ambientes
 ```
 
 ## Módulo EC2 (doc 23)
