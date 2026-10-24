@@ -16,7 +16,9 @@ devops/
 │   │   ├── main.tofu, security_group.tofu, variables.tofu, outputs.tofu
 │   ├── rds/                # MÓDULO: subnet group, parameter group, SG, RDS PostgreSQL (doc 26)
 │   │   ├── main.tofu, security_group.tofu, variables.tofu, outputs.tofu
-│   └── elasticache/        # MÓDULO: SG + ElastiCache Serverless Valkey (doc 27)
+│   ├── elasticache/        # MÓDULO: SG + ElastiCache Serverless Valkey (doc 27)
+│   │   ├── main.tofu, security_group.tofu, variables.tofu, outputs.tofu
+│   └── msk/                # MÓDULO: SG + MSK Serverless Kafka (doc 28)
 │       ├── main.tofu, security_group.tofu, variables.tofu, outputs.tofu
 └── envs/
     ├── dev/                # root module do ambiente development
@@ -26,6 +28,7 @@ devops/
     │   ├── ec2.tofu        # CHAMA modules/ec2 (bastion; rancher comentado)
     │   ├── rds.tofu        # CHAMA modules/rds (module "database")
     │   ├── elasticache.tofu # CHAMA modules/elasticache (module "elasticache")
+    │   ├── msk.tofu        # CHAMA modules/msk (module "msk")
     │   ├── local.tofu      # context_name, my_public_ip, common_tags, configs de SG
     │   ├── variables.tofu  # valores do ambiente (environment, CIDRs, subnets...)
     │   ├── outputs.tofu    # repassa outputs dos módulos

@@ -1,6 +1,6 @@
 # 27. Módulo ElastiCache: Valkey Serverless passo a passo
 
-Visão geral: [ARQUITETURA.md](ARQUITETURA.md) · Módulos: [21-modules.md](21-modules.md) · Módulo irmão: [26-modulo-rds.md](26-modulo-rds.md)
+Visão geral: [ARQUITETURA.md](ARQUITETURA.md) · Módulos: [21-modules.md](21-modules.md) · Módulo irmão: [26-modulo-rds.md](26-modulo-rds.md) · Próximo: [28-modulo-msk.md](28-modulo-msk.md)
 
 ## O que é um cache e por que usar
 

@@ -1,4 +1,4 @@
-# 28. Cheat sheet de comandos
+# 29. Cheat sheet de comandos
 
 > Endereços com `for_each` levam aspas e colchetes: use aspas simples no terminal, ex.: `tofu state show 'aws_subnet.public["public_a"]'`.
 
@@ -168,6 +168,19 @@ ssh -i development-algadelivery-bastion.pem -N \
   -L 6379:$(tofu output -raw elasticache_endpoint_address):6379 \
   ubuntu@$(tofu output -raw bastion_public_ip)                          # túnel pelo bastion
 redis-cli --tls --insecure -h localhost -p 6379 PING                    # em outro terminal → PONG (TLS obrigatório)
+```
+
+## MSK Serverless (doc 28)
+
+```bash
+tofu output -raw msk_bootstrap_brokers_sasl_iam                         # endereço boot-…:9098
+aws kafka list-clusters-v2 --cluster-type-filter SERVERLESS \
+  --query 'ClusterInfoList[].[ClusterName,State]'                       # clusters e estado
+aws kafka get-bootstrap-brokers --cluster-arn "$(tofu output -raw msk_arn)"   # brokers (IAM)
+# no bastion, com role IAM + aws-msk-iam-auth + client.properties (doc 28):
+./kafka-topics.sh --bootstrap-server $BOOT --command-config ~/client.properties --list
+./kafka-topics.sh --bootstrap-server $BOOT --command-config ~/client.properties \
+  --create --topic pedidos --partitions 3
 ```
 
 ## Outputs

@@ -100,4 +100,28 @@ locals {
       }
     ]
   }
+
+  msk_security_group_config = var.msk_security_group_config != null ? var.msk_security_group_config : {
+    name        = "${var.environment}-${local.context_name}-msk-sg"
+    description = "Security group for MSK Serverless cluster in ${var.environment}"
+    ingress_rules = [
+      {
+        description = "Kafka IAM da VPC"
+        from_port   = 9098
+        to_port     = 9098
+        protocol    = "tcp"
+        cidr_blocks = [var.vpc_cidr_block]
+      }
+    ]
+    egress_rules = [
+      {
+        description = "Todo o trafego de saida"
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = [local.internet_cidr_block]
+      }
+    ]
+  }
+
 }

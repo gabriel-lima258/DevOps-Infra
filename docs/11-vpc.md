@@ -90,7 +90,7 @@ Eles **não** aparecem no `tofu state list` como recursos próprios; são atribu
 | Atributo | Padrão | Quando mudar |
 |----------|--------|--------------|
 | `enable_dns_support` | `true` | Quase nunca desligue |
-| `enable_dns_hostnames` | `false` | Ligue (`true`) se as instâncias precisarem de nome DNS público, ou para usar VPC endpoints/EKS |
+| `enable_dns_hostnames` | `false` | Ligue (`true`) se as instâncias precisarem de nome DNS público, ou para usar VPC endpoints/EKS. **Hoje ligado** no `modules/vpc` (junto com `enable_dns_support = true`) por causa do MSK Serverless ([doc 28](28-modulo-msk.md#mudança-na-vpc-dns-ligado)) |
 | `instance_tenancy` | `default` | `dedicated` = hardware exclusivo e **caro** |
 
 ## Outputs

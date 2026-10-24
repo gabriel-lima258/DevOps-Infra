@@ -37,7 +37,8 @@ Como tudo se conecta hoje: VPC, subnets, gateways e o que ainda falta. Atualizad
 | 25 | [25-lifecycle.md](25-lifecycle.md) | `lifecycle`: `ignore_changes`, `prevent_destroy`, `create_before_destroy`, `replace_triggered_by` |
 | 26 | [26-modulo-rds.md](26-modulo-rds.md) | Módulo RDS: PostgreSQL gerenciado passo a passo (subnet group, parameter group, SG, instância, senha, túnel) |
 | 27 | [27-modulo-elasticache.md](27-modulo-elasticache.md) | Módulo ElastiCache: Valkey Serverless (cache em memória, limites de GB/ECPU, SG, default com `!= null`, TLS, custos) |
-| 28 | [28-comandos.md](28-comandos.md) | Cheat sheet de comandos |
+| 28 | [28-modulo-msk.md](28-modulo-msk.md) | Módulo MSK: Kafka Serverless (mensageria/eventos, tópicos e partições, autenticação IAM, data source dependente de recurso, DNS na VPC, custos 💲💲) |
+| 29 | [29-comandos.md](29-comandos.md) | Cheat sheet de comandos |
 | 📘 | [types_expression.md](types_expression.md) | Material de apoio (aula 04.04): tipos de coleção e for expressions, com exercícios |
 | — | [CHANGELOG.md](CHANGELOG.md) | Diário de estudo: o que mudou e quando |
 
@@ -53,9 +54,10 @@ devops/
 │   ├── vpc/               # MÓDULO: VPC, 12 subnets em grupos, IGW, NAT regional, route tables
 │   ├── ec2/               # MÓDULO: chave + key pair + .pem, SG (dynamic), EC2, Elastic IP (count)
 │   ├── rds/               # MÓDULO: subnet group, parameter group, SG, RDS PostgreSQL
-│   └── elasticache/       # MÓDULO: SG + ElastiCache Serverless (Valkey)
+│   ├── elasticache/       # MÓDULO: SG + ElastiCache Serverless (Valkey)
+│   └── msk/               # MÓDULO: SG + MSK Serverless (Kafka, auth IAM)
 ├── envs/
-│   ├── dev/               # ambiente development (root module): providers, data, vpc, ec2, rds, elasticache, local, variables, outputs
+│   ├── dev/               # ambiente development (root module): providers, data, vpc, ec2, rds, elasticache, msk, local, variables, outputs
 │   └── prod/              # ambiente production: mesmos arquivos, valores de prod
 └── docs/                  # esta documentação (+ fluxo-opentofu.png)
 ```
@@ -66,10 +68,10 @@ devops/
 
 | Ambiente | State | VPC | Status |
 |----------|-------|-----|--------|
-| `envs/dev` | `algadelivery/development/remote.tfstate` | `172.25.0.0/16` | 💤 destruído (state vazio, custo zero). O código tem 41 recursos: `tofu apply` recria tudo |
+| `envs/dev` | `algadelivery/development/remote.tfstate` | `172.25.0.0/16` | 💤 destruído (state vazio, custo zero). O código tem 43 recursos: `tofu apply` recria tudo |
 | `envs/prod` | `algadelivery/production/remote.tfstate` | `172.26.0.0/16` | ⏸️ rode `tofu init -reconfigure` antes do primeiro plan |
 
-- **Em cada ambiente:** `module.vpc` (VPC, 3 públicas + 9 privadas em grupos management/cluster/database, IGW, NAT regional 💲, route tables) e `module.bastion` (EC2 Ubuntu `t3.micro`, Elastic IP, SG via `dynamic`, key pair + `.pem`). `module.database` (RDS PostgreSQL 18 `db.t4g.micro` nas subnets database, senha no Secrets Manager; backup 10 dias + janela de manutenção). `module.elasticache` (Valkey Serverless 8 nas subnets management, SG 6379; ⚠️ `prevent_destroy = true` e mínimos cobrados ~US$ 67/mês). `module.rancher` está comentado.
+- **Em cada ambiente:** `module.vpc` (VPC, 3 públicas + 9 privadas em grupos management/cluster/database, IGW, NAT regional 💲, route tables) e `module.bastion` (EC2 Ubuntu `t3.micro`, Elastic IP, SG via `dynamic`, key pair + `.pem`). `module.database` (RDS PostgreSQL 18 `db.t4g.micro` nas subnets database, senha no Secrets Manager; backup 10 dias + janela de manutenção). `module.elasticache` (Valkey Serverless 8 nas subnets management, SG 6379; ⚠️ `prevent_destroy = true` e mínimos cobrados ~US$ 67/mês). `module.msk` (Kafka Serverless nas subnets management, auth IAM na 9098; 💲💲 ~US$ 547/mês e `prevent_destroy = true`). VPC com DNS hostnames ligado. `module.rancher` está comentado.
 - Pendências e riscos: [ARQUITETURA.md](ARQUITETURA.md#pendências).
 
 ## Rodando rápido

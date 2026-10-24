@@ -127,3 +127,19 @@ output "security_group_elasticache_id" {
   description = "The ID of the ElastiCache security group"
   value       = module.elasticache.security_group_id
 }
+
+output "msk_arn" {
+  description = "The ARN of the MSK Serverless cluster"
+  value       = module.msk.arn
+}
+
+output "msk_bootstrap_brokers_sasl_iam" {
+  description = "IAM bootstrap broker endpoints for the MSK Serverless cluster"
+  value       = module.msk.bootstrap_brokers_sasl_iam
+}
+
+output "security_group_msk_id" {
+  description = "The ID of the MSK security group"
+  value       = module.msk.security_group_id
+}
+

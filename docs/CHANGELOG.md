@@ -2,6 +2,19 @@
 
 Registro do que mudou no código e quais docs foram atualizados. Mais recente no topo.
 
+## 2026-10-23 (módulo MSK: Kafka Serverless)
+
+**Código**
+- Novo `modules/msk/`: `aws_msk_serverless_cluster` (`vpc_config` com subnets + SG, `client_authentication.sasl.iam`, `prevent_destroy = true`), `data "aws_msk_bootstrap_brokers"` lendo o ARN do cluster, SG (object + dynamic + `create_before_destroy`). Outputs: arn, bootstrap IAM, id do SG.
+- `envs/{dev,prod}`: `msk.tofu` (`module "msk"`, nome `${env}-algadelivery-msk`, subnets `management`), `msk_security_group_config` (null) + default no `local` (9098 da VPC), 3 outputs.
+- `modules/vpc/main.tofu`: `enable_dns_hostnames = true` e `enable_dns_support = true` (DNS privado dos VPC endpoints do MSK).
+- dev: `validate` ✅, `plan` = **43 to add** (data source "read during apply"). O recurso já exporta `bootstrap_brokers_sasl_iam` (data source redundante). Preço: US$ 0,75/cluster-hora (~US$ 547/mês). `kafka:ListClustersV2` → `SubscriptionRequiredException`. `fmt` falha em `envs/prod/local.tofu` (indentação do novo local) + os 3 antigos.
+- ⚠️ `prevent_destroy = true` fixo no recurso mais caro; nenhuma role/policy IAM para os clientes (ninguém conecta); SG da VPC inteira + egress sem uso + `name` fixo.
+
+**Docs**
+- Novo `28-modulo-msk.md`: mensageria (fila x streaming), Kafka em 6 conceitos, provisioned x serverless, portas, passos 1–4, data source dependente de recurso, DNS na VPC, plan real, como conectar (role IAM + instance profile testados, cliente Kafka com `aws-msk-iam-auth`), custos comparados, validação e 8 pontos de atenção.
+- `28-comandos.md` → **`29-comandos.md`** (+ comandos do MSK). `ARQUITETURA.md` (MSK no diagrama, DNS, tabela 43, custos, pendências, histórico), README, `10`, `11` (DNS), `24`, `25`, `27` (link).
+
 ## 2026-10-23 (módulo ElastiCache: Valkey Serverless)
 
 **Código**
@@ -12,7 +25,7 @@ Registro do que mudou no código e quais docs foram atualizados. Mais recente no
 
 **Docs**
 - Novo `27-modulo-elasticache.md`: cache x banco, Valkey x Redis x Memcached, serverless x node-based, ECPU, passos 1–4 (SG, cache com tabela de argumentos, chamada no env + padrão default com `!= null`, outputs com `[0]`), plan real, como conectar com TLS pelo bastion, custos (Price List API), validação e 8 pontos de atenção com snippets testados.
-- `27-comandos.md` → **`28-comandos.md`** (+ comandos do ElastiCache). `ARQUITETURA.md` (Valkey no diagrama, tabela 41, custos, pendências, histórico), README, `10` (árvore), `24`, `25` (prevent_destroy de novo).
+- `27-comandos.md` → **`28-comandos.md`**, hoje `29` (+ comandos do ElastiCache). `ARQUITETURA.md` (Valkey no diagrama, tabela 41, custos, pendências, histórico), README, `10` (árvore), `24`, `25` (prevent_destroy de novo).
 
 ## 2026-10-23 (RDS: backup e janela de manutenção)
 
